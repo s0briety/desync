@@ -414,7 +414,7 @@ local CreateMenu = function()
 
     Legitbot.Bindmode = Legitbot.Section:AddList({
         enabled = true,
-        text = "Bind mode", 
+        text = "Bind Mode", 
         tooltip = "Select a bind mode",
         selected = "Toggle",
         multi = false,
@@ -462,7 +462,7 @@ local CreateMenu = function()
 
     LegitAimbot.Bindmode = LegitAimbot.Section:AddList({
         enabled = true,
-        text = "Bind mode", 
+        text = "Bind Mode", 
         tooltip = "Select a bind mode",
         selected = "Toggle",
         multi = false,
@@ -478,7 +478,7 @@ local CreateMenu = function()
 
     LegitAimbot.Aimbotmode = LegitAimbot.Section:AddList({
         enabled = true,
-        text = "Aimbot mode", 
+        text = "Aimbot Mode", 
         tooltip = "Select an aimbot mode",
         selected = "Camera",
         multi = false,
@@ -504,35 +504,6 @@ local CreateMenu = function()
         risky = false,
         callback = function(v)
             return
-        end
-    })
-
-    LegitAimbot.Section:AddSeparator({})
-
-    LegitAimbot.Priority = LegitAimbot.Section:AddList({
-        enabled = true,
-        text = "Aimbot priority", 
-        tooltip = "Choose target selection",
-        selected = "Closest",
-        multi = false,
-        open = false,
-        values = {"Closest", "Crosshair", "Least HP", "Most HP"},
-        risky = false,
-        callback = function(v)
-
-        end
-    })
-
-    LegitAimbot.Conditions = LegitAimbot.Section:AddList({
-        enabled = true,
-        text = "Aimbot conditions", 
-        tooltip = "Configure aimbot conditions",
-        multi = true,
-        open = false,
-        values = {"Target Alive", "Immunity Check", "Visibility Check"},
-        risky = false,
-        callback = function(v)
-
         end
     })
 
@@ -566,6 +537,63 @@ local CreateMenu = function()
         risky = false,
         callback = function(v)
             return
+        end
+    })
+
+    local LegitAimbotTargeting = {
+        Section = LegitTab:AddSection("Targeting", 1)
+    }
+
+    LegitAimbotTargeting.Hitboxes = LegitAimbotTargeting.Section:AddList({
+        enabled = true,
+        text = "Aimbot Hitboxes", 
+        tooltip = "Configure aimbot hitboxes",
+        multi = true,
+        open = false,
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    LegitAimbotTargeting.PreferredHitboxes = LegitAimbotTargeting.Section:AddList({
+        enabled = true,
+        text = "Hitbox Priority", 
+        tooltip = "Configure preferred aimbot hitboxes",
+        multi = true,
+        open = false,
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    LegitAimbotTargeting.Priority = LegitAimbotTargeting.Section:AddList({
+        enabled = true,
+        text = "Aimbot Priority", 
+        tooltip = "Choose target selection",
+        selected = "Closest",
+        multi = false,
+        open = false,
+        values = {"Closest", "Crosshair", "Least HP", "Most HP"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    LegitAimbotTargeting.Conditions = LegitAimbotTargeting.Section:AddList({
+        enabled = true,
+        text = "Aimbot Conditions", 
+        tooltip = "Configure aimbot conditions",
+        multi = true,
+        open = false,
+        values = {"Target Alive", "Immunity Check", "Visibility Check"},
+        risky = false,
+        callback = function(v)
+
         end
     })
 
@@ -603,7 +631,7 @@ local CreateMenu = function()
 
     LegitTriggerbot.Bindmode = LegitTriggerbot.Section:AddList({
         enabled = true,
-        text = "Bind mode", 
+        text = "Bind Mode", 
         tooltip = "Select a bind mode",
         selected = "Toggle",
         multi = false,
@@ -633,7 +661,7 @@ local CreateMenu = function()
 
     LegitTriggerbot.Conditions = LegitTriggerbot.Section:AddList({
         enabled = true,
-        text = "Triggerbot conditions", 
+        text = "Triggerbot Conditions", 
         tooltip = "Configure triggerbot conditions",
         multi = true,
         open = false,
@@ -678,7 +706,7 @@ local CreateMenu = function()
 
     LegitAimAssist.Bindmode = LegitAimAssist.Section:AddList({
         enabled = true,
-        text = "Bind mode", 
+        text = "Bind Mode", 
         tooltip = "Select a bind mode",
         selected = "Toggle",
         multi = false,
@@ -728,7 +756,7 @@ local CreateMenu = function()
     }
 
     LegitOther.AimbotFOV = LegitOther.Section:AddToggle({
-        text = "Aimbot FOV",
+        text = "FOV",
         state = false,
         tooltip = "Toggle aimbot FOV visualization",
         flag = "Toggle_1",
@@ -814,7 +842,7 @@ local CreateMenu = function()
 
     Ragebot.Bind = Ragebot.Toggle:AddBind({
         enabled = true,
-        text = "Key",
+        text = "ragebot",
         tooltip = "Toggle on key press",
         mode = "toggle",
         bind = "None",
@@ -832,7 +860,7 @@ local CreateMenu = function()
 
     Ragebot.Bindmode = Ragebot.Section:AddList({
         enabled = true,
-        text = "Bind mode", 
+        text = "Bind Mode", 
         tooltip = "Select a bind mode",
         selected = "Toggle",
         multi = false,
@@ -847,7 +875,7 @@ local CreateMenu = function()
     Ragebot.Section:AddSeparator({})
 
     Ragebot.AutoFire = Ragebot.Section:AddToggle({
-        text = "Autofire",
+        text = "Auto Fire",
         state = false,
         tooltip = "Toggle ragebot auto firing (auto shoot)",
         flag = "Toggle_1",
@@ -856,9 +884,9 @@ local CreateMenu = function()
         end
     })
 
-    Ragebot.Aimbotmode = Ragebot.Section:AddList({
+    Ragebot.AimbotMode = Ragebot.Section:AddList({
         enabled = true,
-        text = "Aimbot mode", 
+        text = "Aimbot Mode", 
         tooltip = "Select an aimbot mode",
         selected = "Camera",
         multi = false,
@@ -887,11 +915,39 @@ local CreateMenu = function()
         end
     })
 
-    Ragebot.Section:AddSeparator({})
+    local RagebotTargeting = {
+        Section = RageTab:AddSection("Targeting", 1)
+    }
 
-    Ragebot.Priority = Ragebot.Section:AddList({
+    RagebotTargeting.Hitboxes = RagebotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot priority", 
+        text = "Aimbot Hitboxes", 
+        tooltip = "Configure aimbot hitboxes",
+        multi = true,
+        open = false,
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    RagebotTargeting.PreferredHitboxes = RagebotTargeting.Section:AddList({
+        enabled = true,
+        text = "Hitbox Priority", 
+        tooltip = "Configure preferred aimbot hitboxes",
+        multi = true,
+        open = false,
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    RagebotTargeting.Priority = RagebotTargeting.Section:AddList({
+        enabled = true,
+        text = "Aimbot Priority", 
         tooltip = "Choose target selection",
         selected = "Closest",
         multi = false,
@@ -903,13 +959,135 @@ local CreateMenu = function()
         end
     })
 
-    Ragebot.Conditions = Ragebot.Section:AddList({
+    RagebotTargeting.Conditions = RagebotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot conditions", 
+        text = "Aimbot Conditions", 
         tooltip = "Configure aimbot conditions",
         multi = true,
         open = false,
         values = {"Target Alive", "Immunity Check", "Visibility Check"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    local RagebotAntiAim = {
+        Section = RageTab:AddSection("Anti-Aim", 2)
+    }
+
+    RagebotAntiAim.Toggle = RagebotAntiAim.Section:AddToggle({
+        text = "Toggle",
+        state = false,
+        tooltip = "Toggle ragebot anti-aim",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    RagebotAntiAim.Pitch = RagebotAntiAim.Section:AddList({
+        enabled = true,
+        text = "Pitch Mode", 
+        tooltip = "Configure anti-aim pitch",
+        multi = false,
+        open = false,
+        values = {"None", "Up", "Down", "Random"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    RagebotAntiAim.Yaw = RagebotAntiAim.Section:AddList({
+        enabled = true,
+        text = "Yaw Mode", 
+        tooltip = "Configure anti-aim yaw",
+        multi = false,
+        open = false,
+        values = {"None", "Spin", "Jitter", "Random"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    RagebotAntiAim.Desync = RagebotAntiAim.Section:AddList({
+        enabled = true,
+        text = "Desync Mode", 
+        tooltip = "Configure anti-aim desync",
+        multi = false,
+        open = false,
+        values = {"None", "Null", "Beneath", "Break", "Random"},
+        risky = false,
+        callback = function(v)
+
+        end
+    })
+
+    local RagebotExploits = {
+        Section = RageTab:AddSection("Exploits", 2)
+    }
+
+    RagebotExploits.ExtendedHitboxes = RagebotExploits.Section:AddToggle({
+        text = "Extended Hitboxes",
+        state = false,
+        tooltip = "Extend enemy hitboxes",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    RagebotExploits.HitboxSize = RagebotExploits.ExtendedHitboxes:AddSlider({
+        enabled = true,
+        text = "Hitbox Size",
+        tooltip = "Adjust enemy hitbox sizes",
+        flag = "Slider_1",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 100,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    RagebotExploits.RapidFire = RagebotExploits.Section:AddToggle({
+        text = "Rapid Fire",
+        state = false,
+        tooltip = "Increases fire rate",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    RagebotExploits.FireRate = RagebotExploits.RapidFire:AddSlider({
+        enabled = true,
+        text = "Fire Rate",
+        tooltip = "Adjust fire rate",
+        flag = "Slider_1",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 6,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    RagebotExploits.Reloadind = RagebotExploits.Section:AddList({
+        enabled = true,
+        text = "Reload", 
+        tooltip = "Configure weapon reload exploits",
+        multi = true,
+        open = false,
+        values = {"Auto Reload", "Spam Reload", "Rifle Reload"},
         risky = false,
         callback = function(v)
 
