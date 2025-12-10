@@ -155,7 +155,7 @@ function HookRegistry:RegisterCustom(customEventName, callback, name)
     end
     
     if not self.eventSignals.onCustom[customEventName] then
-        self.eventSignals.onCustom[customEventName] = self:_CreateSignal(customEventName)
+        self.eventSignals.onCustom[customEventName] = Signal.new()
     end
     
     if not self.hooks.onCustom then
@@ -232,6 +232,32 @@ function HookRegistry:Initialize()
     game.Players.PlayerRemoving:Connect(function(player)
         self:Fire("onPlayerRemoving", player)
     end)
+end
+
+function HookRegistry:Destroy()
+    self:_EnsureState()
+    
+    for eventName, hookTable in pairs(self.hooks) do
+        for hookName, hook in pairs(hookTable) do
+            hook:Disconnect()
+        end
+    end
+    
+    for _, signal in pairs(self.eventSignals) do
+        if signal.Destroy then
+            signal:Destroy()
+        end
+    end
+    
+    for _, signalTable in pairs(self.eventSignals.onCustom) do
+        if signalTable.Destroy then
+            signalTable:Destroy()
+        end
+    end
+    
+    self.hooks = {}
+    self.eventSignals = {}
+    self.initialized = false
 end
 
 return HookRegistry

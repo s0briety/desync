@@ -106,6 +106,14 @@ local OnLoad = function()
     end)
 end
 
+local onUnload = function()
+    UI.unloaded:Destroy()
+    Hooks:Destroy()
+
+    script:Destroy()
+    script = nil
+end
+
 local CreateMenu = function()
     UI:init()
 
@@ -1487,5 +1495,6 @@ CreateMenu()
 
 Hooks:Register("onInit", onInit)
 Hooks:Register("onRenderStepped", onRenderStepped)
+Hooks:RegisterCustom("Unload", onUnload)
 
 Hooks:Initialize()
