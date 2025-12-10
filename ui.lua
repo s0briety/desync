@@ -12,7 +12,7 @@ local function gs(a)
     return game:GetService(a)
 end
 
-print("08:21")
+print("08:28")
 
 -- // Variables
 local players, http, runservice, inputservice, tweenService, stats, actionservice = gs('Players'), gs('HttpService'),
@@ -2580,7 +2580,10 @@ function library:init()
                                         if bind.callback then
                                             bind.callback(false);
                                         end
-                                        bind.indicatorValue:SetEnabled(bind.invertindicator and true or false);
+                                        -- Only update indicator for hold mode; toggle mode keeps its state
+                                        if bind.mode == 'hold' then
+                                            bind.indicatorValue:SetEnabled(bind.invertindicator and true or false);
+                                        end
                                     end
                                 end
                             end
@@ -4232,7 +4235,10 @@ function library:init()
                                         library.flags[bind.flag] = false;
                                     end
                                     bind.callback(false);
-                                    bind.indicatorValue:SetEnabled(false);
+                                    -- Only disable indicator for hold mode; toggle mode keeps its state
+                                    if bind.mode == 'hold' then
+                                        bind.indicatorValue:SetEnabled(false);
+                                    end
                                 end
                             end
                         end
