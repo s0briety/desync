@@ -12,6 +12,8 @@ local function gs(a)
     return game:GetService(a)
 end
 
+print("08:21")
+
 -- // Variables
 local players, http, runservice, inputservice, tweenService, stats, actionservice = gs('Players'), gs('HttpService'),
     gs('RunService'), gs('UserInputService'), gs('TweenService'), gs('Stats'), gs('ContextActionService')
@@ -2534,13 +2536,30 @@ function library:init()
                                     if bind.invertindicator then
                                         display = not bind.state;
                                     end
-                                    bind.indicatorValue:SetEnabled(display and not bind.noindicator);
+                                    -- Update indicator with current mode
+                                    if not bind.noindicator then
+                                        local modeLabel = '[T]'
+                                        local currentKey = bind.objects.keyText.Text
+                                        bind.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                                        bind.indicatorValue:SetEnabled(display)
+                                    else
+                                        bind.indicatorValue:SetEnabled(display and not bind.noindicator)
+                                    end
                                 elseif bind.mode == 'hold' then
                                     if bind.flag then
                                         library.flags[bind.flag] = true;
                                     end
-                                    bind.indicatorValue:SetEnabled(
-                                        (not bind.invertindicator and true or false) and not bind.noindicator);
+                                    -- Update indicator with current mode
+                                    if not bind.noindicator then
+                                        local modeLabel = '[H]'
+                                        local currentKey = bind.objects.keyText.Text
+                                        bind.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                                        bind.indicatorValue:SetEnabled(
+                                            (not bind.invertindicator and true or false))
+                                    else
+                                        bind.indicatorValue:SetEnabled(
+                                            (not bind.invertindicator and true or false) and not bind.noindicator)
+                                    end
                                     c = utility:Connection(runservice.RenderStepped, function()
                                         if bind.callback then
                                             bind.callback(true);
@@ -4175,12 +4194,28 @@ function library:init()
                                     library.flags[bind.flag] = bind.state;
                                 end
                                 bind.callback(bind.state)
-                                bind.indicatorValue:SetEnabled(bind.state and not bind.noindicator);
+                                -- Update indicator with current mode
+                                if not bind.noindicator then
+                                    local modeLabel = '[T]'
+                                    local currentKey = bind.objects.keyText.Text
+                                    bind.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                                    bind.indicatorValue:SetEnabled(bind.state)
+                                else
+                                    bind.indicatorValue:SetEnabled(bind.state and not bind.noindicator)
+                                end
                             elseif bind.mode == 'hold' then
                                 if bind.flag then
                                     library.flags[bind.flag] = true;
                                 end
-                                bind.indicatorValue:SetEnabled(true and not bind.noindicator);
+                                -- Update indicator with current mode
+                                if not bind.noindicator then
+                                    local modeLabel = '[H]'
+                                    local currentKey = bind.objects.keyText.Text
+                                    bind.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                                    bind.indicatorValue:SetEnabled(true)
+                                else
+                                    bind.indicatorValue:SetEnabled(true and not bind.noindicator)
+                                end
                                 c = utility:Connection(runservice.RenderStepped, function()
                                     bind.callback(true);
                                 end)
