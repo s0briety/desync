@@ -195,7 +195,9 @@ local keyNames = {
     [Enum.KeyCode.RightShift] = 'RSHIFT',
     [Enum.UserInputType.MouseButton1] = 'MB1',
     [Enum.UserInputType.MouseButton2] = 'MB2',
-    [Enum.UserInputType.MouseButton3] = 'MB3'
+    [Enum.UserInputType.MouseButton3] = 'MB3',
+    [Enum.UserInputType.MouseButton4] = 'MB4',
+    [Enum.UserInputType.MouseButton5] = 'MB5'
 }
 
 library.button1down = library.signal.new()
@@ -2511,7 +2513,10 @@ function library:init()
                             elseif bind.binding then
                                 local key = (table.find({Enum.UserInputType.MouseButton1,
                                                          Enum.UserInputType.MouseButton2,
-                                                         Enum.UserInputType.MouseButton3}, inp.UserInputType) and
+                                                         Enum.UserInputType.MouseButton3,
+                                                         Enum.UserInputType.MouseButton4,
+                                                         Enum.UserInputType.MouseButton5
+                                                        }, inp.UserInputType) and
                                                 not bind.nomouse) and inp.UserInputType
                                 bind:SetBind(key or (not table.find(blacklistedKeys, inp.KeyCode)) and inp.KeyCode)
                                 bind.binding = false
@@ -4179,8 +4184,13 @@ function library:init()
                         if inputservice:GetFocusedTextBox() then
                             return
                         elseif bind.binding then
-                            local key = (table.find({Enum.UserInputType.MouseButton1, Enum.UserInputType.MouseButton2,
-                                                     Enum.UserInputType.MouseButton3}, inp.UserInputType) and
+                            local key = (table.find({
+                                                    Enum.UserInputType.MouseButton1, 
+                                                    Enum.UserInputType.MouseButton2,
+                                                    Enum.UserInputType.MouseButton3,
+                                                    Enum.UserInputType.MouseButton4,
+                                                    Enum.UserInputType.MouseButton5,
+                                                    }, inp.UserInputType) and
                                             not bind.nomouse) and inp.UserInputType
                             bind:SetBind(key or (not table.find(blacklistedKeys, inp.KeyCode)) and inp.KeyCode)
                             bind.binding = false
