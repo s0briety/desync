@@ -382,7 +382,8 @@ local CreateMenu = function()
         values = {"Toggle", "Hold"},
         risky = false,
         callback = function(v)
-            LegitMain.Bind:SetMode(v:lower())
+            LegitMain.Bind.mode = v:lower()
+            print(LegitMain.Bind.mode)
         end
     })
 
@@ -430,7 +431,7 @@ local CreateMenu = function()
         values = {"Toggle", "Hold"},
         risky = false,
         callback = function(v)
-            LegitAimbot.Bind:SetMode(v:lower())
+            return
         end
     })
 
