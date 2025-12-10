@@ -1115,6 +1115,35 @@ local CreateMenu = function()
         end
     })
 
+    local VisualsESP = {
+        Section = VisualsTab:AddSection("ESP", 1)
+    }
+
+    VisualsESP.Toggle = VisualsESP.Section:AddToggle({
+        text = "Toggle",
+        state = false,
+        tooltip = "Toggle visual features",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.MaxDistance = VisualsESP.Toggle:AddSlider({
+        enabled = true,
+        text = "Max Distance",
+        tooltip = "Adjust ESP max view distance",
+        flag = "Slider_1",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 10000,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
 end
 
 local Hooks = HookRegistry()
