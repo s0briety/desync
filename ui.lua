@@ -4139,11 +4139,13 @@ function library:init()
                             keyName = keyNames[keybind] or keybind.Name or keybind
                         end
                         self.keycallback(self.bind);
-                        self.SetMode(self.bind.mode);
                         self:SetKeyText(keyName:upper());
                         self.indicatorValue:SetKey((self.text == nil or self.text == '') and
                                                        (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
-                        self.indicatorValue:SetValue('[' .. str .. ']' .. ' - ' .. self.objects.modeText.Text);
+                        
+                        -- Update indicator with key and mode
+                        local modeLabel = self.mode == 'hold' and '[H]' or '[T]'
+                        self.indicatorValue:SetValue('[' .. keyName:upper() .. '] ' .. modeLabel);
                         self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                     end
 
