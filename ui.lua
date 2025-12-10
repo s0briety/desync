@@ -4140,12 +4140,16 @@ function library:init()
                         end
                         self.keycallback(self.bind);
                         self:SetKeyText(keyName:upper());
-                        self.indicatorValue:SetKey((self.text == nil or self.text == '') and
-                                                       (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
                         
-                        -- Update indicator with key and mode
-                        local modeLabel = self.mode == 'hold' and '[H]' or '[T]'
-                        self.indicatorValue:SetValue('[' .. keyName:upper() .. '] ' .. modeLabel);
+                        -- Only update indicator if not disabled
+                        if not self.noindicator then
+                            self.indicatorValue:SetKey((self.text == nil or self.text == '') and
+                                                           (self.flag == nil and 'unknown' or self.flag) or self.text);
+                            
+                            -- Update indicator with key and mode
+                            local modeLabel = self.mode == 'hold' and '[H]' or '[T]'
+                            self.indicatorValue:SetValue('[' .. keyName:upper() .. '] ' .. modeLabel);
+                        end
                         self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                     end
 
@@ -4196,7 +4200,9 @@ function library:init()
                                         library.flags[bind.flag] = false;
                                     end
                                     bind.callback(false);
-                                    bind.indicatorValue:SetEnabled(false);
+                                    if not bind.noindicator then
+                                        bind.indicatorValue:SetEnabled(false);
+                                    end
                                 end
                             end
                         end
@@ -4210,9 +4216,11 @@ function library:init()
                         if mode == 'toggle' or mode == 'hold' then
                             self.mode = mode
                             -- Update the indicator value to show the current mode
-                            local modeLabel = mode == 'hold' and '[H]' or '[T]'
-                            local currentKey = self.objects.keyText.Text
-                            self.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                            if not self.noindicator then
+                                local modeLabel = mode == 'hold' and '[H]' or '[T]'
+                                local currentKey = self.objects.keyText.Text
+                                self.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                            end
                         end
                     end
                     
