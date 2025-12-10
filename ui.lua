@@ -2486,7 +2486,6 @@ function library:init()
                                 bind.indicatorValue:SetEnabled(display and not bind.noindicator);
                             end
                             self.keycallback(self.bind);
-                            self.SetMode(self.bind.mode);
                             self:SetKeyText(keyName:upper());
                             self.indicatorValue:SetKey((self.text == nil or self.text == '') and
                                                            (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
@@ -2499,7 +2498,7 @@ function library:init()
 
                         function bind:SetKeyText(str)
                             str = tostring(str);
-                            self.objects.keyText.Text = '[' .. str .. ']' .. ' - ';
+                            self.objects.keyText.Text = '[' .. str .. ']';
                             self.objects.keyText.Position = newUDim2(0, 2, 0, 2);
                             self.objects.holder.Size = newUDim2(0, self.objects.keyText.TextBounds.X + 2, 0, 17)
                             toggle:UpdateOptions();
@@ -2569,15 +2568,6 @@ function library:init()
 
                         tooltip(bind);
                         bind:SetBind(bind.bind);
-
-                        function bind:SetMode(mode)
-                            if mode == 'toggle' or mode == 'hold' then
-                                self.mode = mode
-                                local modeText = mode == 'hold' and '(HOLD)' or '(TOGGLE)'
-                                self.objects.modeText.Text = modeText
-                            end
-                        end
-                        
                         self:UpdateOptions();
                         return bind
                     end
@@ -4119,9 +4109,7 @@ function library:init()
                         if typeof(str) == 'string' then
                             self.text = str;
                             self.objects.text.Text = str;
-                            if not self.noindicator then
-                                self.indicatorValue:SetKey(str);
-                            end
+                            self.indicatorValue:SetKey(str);
                         end
                     end
 
@@ -4137,24 +4125,14 @@ function library:init()
                         self.bind = (keybind and keybind) or keybind or self.bind
                         if self.bind == Enum.KeyCode.Backspace then
                             self.bind = 'none';
-                            keyName = 'NONE'
-                        elseif typeof(self.bind) == 'string' then
-                            keyName = self.bind
                         else
-                            keyName = keyNames[keybind] or (keybind and keybind.Name) or 'NONE'
+                            keyName = keyNames[keybind] or keybind.Name or keybind
                         end
                         self.keycallback(self.bind);
-                        self:SetKeyText(tostring(keyName):upper());
-                        
-                        -- Only update indicator if not disabled
-                        if not self.noindicator then
-                            self.indicatorValue:SetKey((self.text == nil or self.text == '') and
-                                                           (self.flag == nil and 'unknown' or self.flag) or self.text);
-                            
-                            -- Update indicator with key and mode
-                            local modeLabel = self.mode == 'hold' and '[H]' or '[T]'
-                            self.indicatorValue:SetValue('[' .. tostring(keyName):upper() .. '] ' .. modeLabel);
-                        end
+                        self:SetKeyText(keyName:upper());
+                        self.indicatorValue:SetKey((self.text == nil or self.text == '') and
+                                                       (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
+                        self.indicatorValue:SetValue('[' .. keyName:upper() .. ']');
                         self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                     end
 
@@ -4205,9 +4183,7 @@ function library:init()
                                         library.flags[bind.flag] = false;
                                     end
                                     bind.callback(false);
-                                    if not bind.noindicator then
-                                        bind.indicatorValue:SetEnabled(false);
-                                    end
+                                    bind.indicatorValue:SetEnabled(false);
                                 end
                             end
                         end
@@ -4216,18 +4192,6 @@ function library:init()
                     tooltip(bind);
                     bind:SetBind(bind.bind);
                     bind:SetText(bind.text);
-                    
-                    function bind:SetMode(mode)
-                        if mode == 'toggle' or mode == 'hold' then
-                            self.mode = mode
-                            -- Update the indicator value to show the current mode
-                            if not self.noindicator then
-                                local modeLabel = mode == 'hold' and '[H]' or '[T]'
-                                local currentKey = self.objects.keyText.Text
-                                self.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
-                            end
-                        end
-                    end
                     
                     self:UpdateOptions();
                     return bind
