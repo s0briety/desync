@@ -81,6 +81,7 @@ local HookRegistry = class()
 function HookRegistry:init()
     self.hooks = {}
     self.callbackCounter = 0
+    self.services = Services
     
     local function createSignal(name)
         local signal = {}
@@ -162,10 +163,11 @@ function HookRegistry:_CreateSignal(name)
 end
 
 function HookRegistry:_EnsureState()
-    if self.hooks and self.eventSignals then return end
+    if self.hooks and self.eventSignals and self.services then return end
 
     self.hooks = self.hooks or {}
     self.callbackCounter = self.callbackCounter or 0
+    self.services = self.services or Services
     if not self.eventSignals then
         self.eventSignals = {
             onInit = self:_CreateSignal("onInit"),
@@ -275,11 +277,11 @@ function HookRegistry:Initialize()
 
     self:Fire("onInit")
     
-    Services.RunService.RenderStepped:Connect(function()
+    self.services.RunService.RenderStepped:Connect(function()
         self:Fire("onRenderStepped")
     end)
     
-    Services.RunService.Heartbeat:Connect(function()
+    self.services.RunService.Heartbeat:Connect(function()
         self:Fire("onHeartbeat")
     end)
     
