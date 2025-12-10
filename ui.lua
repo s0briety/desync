@@ -1882,7 +1882,7 @@ function library:init()
 
         function window:AddTab(text, order)
             local tab = {
-                text = string.format("%10s", text),
+                text = tostring(text),
                 order = order or #self.tabs + 1,
                 callback = function()
                 end,

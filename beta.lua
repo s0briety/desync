@@ -344,6 +344,27 @@ local Utility = {
         end
 
         return "Universal"
+    end,
+
+    center_pad = function(str, total_length, pad_char)
+        pad_char = pad_char or " "
+
+        local current_length = #str
+
+        if current_length >= total_length then
+            return str
+        end
+
+        local padding_needed = total_length - current_length
+
+        local left_padding_size = math.floor(padding_needed / 2)
+
+        local right_padding_size = padding_needed - left_padding_size
+
+        local left_padding = string.rep(pad_char, left_padding_size)
+        local right_padding = string.rep(pad_char, right_padding_size)
+
+        return left_padding .. str .. right_padding
     end
 }
 
@@ -373,11 +394,11 @@ local CreateMenu = function()
         size = UDim2.new(0, 510, 0.6, 6
     )})
 
-    local LegitTab = MainWindow:AddTab("Legit")
-    local RageTab = MainWindow:AddTab("Rage")
-    local VisualsTab = MainWindow:AddTab("Visuals")
-    local WorldTab = MainWindow:AddTab("World")
-    local OtherTab = MainWindow:AddTab("Other")
+    local LegitTab = MainWindow:AddTab(Utility.center_pad("Legit", 8))
+    local RageTab = MainWindow:AddTab(Utility.center_pad("Rage", 8))
+    local VisualsTab = MainWindow:AddTab(Utility.center_pad("Visuals", 8))
+    local WorldTab = MainWindow:AddTab(Utility.center_pad("World", 8))
+    local OtherTab = MainWindow:AddTab(Utility.center_pad("Other", 8))
     local SettingsTab = UI:CreateSettingsTab(MainWindow)
 
     local Legitbot = {
