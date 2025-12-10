@@ -2568,6 +2568,18 @@ function library:init()
 
                         tooltip(bind);
                         bind:SetBind(bind.bind);
+                        
+                        function bind:SetMode(mode)
+                            if mode == 'toggle' or mode == 'hold' then
+                                self.mode = mode
+                                if not self.noindicator then
+                                    local modeLabel = mode == 'hold' and '[H]' or '[T]'
+                                    local currentKey = self.objects.keyText.Text
+                                    self.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                                end
+                            end
+                        end
+                        
                         self:UpdateOptions();
                         return bind
                     end
@@ -4192,6 +4204,17 @@ function library:init()
                     tooltip(bind);
                     bind:SetBind(bind.bind);
                     bind:SetText(bind.text);
+                    
+                    function bind:SetMode(mode)
+                        if mode == 'toggle' or mode == 'hold' then
+                            self.mode = mode
+                            if not self.noindicator then
+                                local modeLabel = mode == 'hold' and '[H]' or '[T]'
+                                local currentKey = self.objects.keyText.Text
+                                self.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
+                            end
+                        end
+                    end
                     
                     self:UpdateOptions();
                     return bind
