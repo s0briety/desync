@@ -12,8 +12,6 @@ local function gs(a)
     return game:GetService(a)
 end
 
-print("08:28")
-
 -- // Variables
 local players, http, runservice, inputservice, tweenService, stats, actionservice = gs('Players'), gs('HttpService'),
     gs('RunService'), gs('UserInputService'), gs('TweenService'), gs('Stats'), gs('ContextActionService')
@@ -73,6 +71,7 @@ local library = {
     opening = false,
     hasInit = false,
     cheatname = startupArgs.cheatname or 'unknown',
+    version = startupArgs.version or '?',
     gamename = startupArgs.gamename or 'Universal',
     fileext = startupArgs.fileext or '.txt',
     discord = startupArgs.discord or nil
@@ -81,7 +80,7 @@ local library = {
 library.themes = {{
     name = 'Default',
     theme = {
-        ['Accent'] = fromrgb(124, 97, 196),
+        ['Accent'] = fromrgb(122, 145, 253),
         ['Background'] = fromrgb(17, 17, 17),
         ['Border'] = fromrgb(0, 0, 0),
         ['Border 1'] = fromrgb(47, 47, 47),
@@ -2525,7 +2524,6 @@ function library:init()
                                 end
                                 bind.indicatorValue:SetEnabled(display and not bind.noindicator)
                             elseif (inp.KeyCode == bind.bind or inp.UserInputType == bind.bind) and not bind.binding then
-                                print(bind.mode)
                                 if bind.mode == 'toggle' then
                                     bind.state = not bind.state
                                     if bind.flag then
@@ -4190,7 +4188,6 @@ function library:init()
                             bind.state = true
                             library.flags[bind.flag] = bind.state
                         elseif (inp.KeyCode == bind.bind or inp.UserInputType == bind.bind) and not bind.binding then
-                            print(bind.mode)
                             if bind.mode == 'toggle' then
                                 bind.state = not bind.state
                                 if bind.flag then
@@ -4691,7 +4688,7 @@ function library:init()
         end
         self.watermark = {
             objects = {},
-            text = {{self.cheatname, true}, {"Private", true}, {self.gamename, true}, {'0 fps', true}, {'0ms', true},
+            text = {{self.cheatname, true}, {self.version, true}, {self.gamename, true}, {'0 fps', true}, {'0ms', true},
                     {'00:00:00', true}, {'M, D, Y', true}},
             lock = 'custom',
             position = newUDim2(0, 0, 0, 0),

@@ -284,9 +284,11 @@ function HookRegistry:Initialize()
     end)
 end
 
+_DEBUG = true
+
 local Metadata = {
     cheat = "desync",
-    build = "beta",
+    build = _DEBUG and "beta" or "dev",
     version = "1.0.0",
     game = "Unknown",
     user = {
@@ -305,8 +307,6 @@ local Utility = {
         local isSuccessful, info = pcall(mps.GetProductInfoAsync, mps, place_id)
 
         if isSuccessful and info.Name ~= nil then
-            print(info.Name)
-
             if GameMap[tostring(place_id)] ~= nil then
                 return GameMap[tostring(place_id)]
             elseif string.match(tostring(info.Name):lower(), "hood") then
@@ -322,9 +322,16 @@ local UI, Clock = nil, nil
 
 local OnLoad = function()
     Metadata.game = Utility.ResolveGame(game.PlaceId)
+    local version_str = Metadata.version
+    local build = Metadata.build
+
+    if build ~= "release" then
+        version_str = version_str .. " [" .. build .. "]"    
+    end
 
     UI, Clock = loadstring(game:HttpGet("https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/ui.lua"))({
         cheatname = Metadata.cheat,
+        version = version_str,
         gamename = Metadata.game,
     }), os.clock()
 end
@@ -379,7 +386,7 @@ local CreateMenu = function()
         selected = "Toggle",
         multi = false,
         open = false,
-        values = {"Toggle", "Hold"},
+        values = {"None", "Toggle", "Hold"},
         risky = false,
         callback = function(v)
             LegitMain.Bind:SetMode(v:lower())
@@ -404,7 +411,7 @@ local CreateMenu = function()
     
     LegitAimbot.Bind = LegitAimbot.Toggle:AddBind({
         enabled = true,
-        text = "Key",
+        text = "aimbot",
         tooltip = "Toggle on key press",
         mode = "toggle",
         bind = "None",
@@ -427,7 +434,7 @@ local CreateMenu = function()
         selected = "Toggle",
         multi = false,
         open = false,
-        values = {"Toggle", "Hold"},
+        values = {"None", "Toggle", "Hold"},
         risky = false,
         callback = function(v)
             LegitAimbot.Bind:SetMode(v:lower())
@@ -451,27 +458,345 @@ local CreateMenu = function()
         end
     })
 
-    -- [[
-    -- Section1:AddColor({
-    --     enabled = true,
-    --     text = "Color1",
-    --     tooltip = "tooltip1",
-    --     color = Color3.fromRGB(255, 255, 255),
-    --     flag = "Color_1",
-    --     trans = 0,
-    --     open = false,
-    --     risky = false,
-    --     callback = function(v)
-    --         return
-    --     end
-    -- })
-    -- ]]
+    LegitAimbot.Smoothing = LegitAimbot.Section:AddSlider({
+        enabled = true,
+        text = "Smoothing",
+        tooltip = "Adjust aimbot smoothing",
+        flag = "Slider_1",
+        dragging = true,
+        focused = false,
+        min = 0.01,
+        max = 1,
+        increment = 0.01,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    local LegitSilentAim = {
+        Section = LegitTab:AddSection("Silent Aim", 1)
+    }
+
+    LegitSilentAim.Toggle = LegitSilentAim.Section:AddToggle({
+        text = "Toggle",
+        state = false,
+        tooltip = "Toggle silent aim",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+    
+    LegitSilentAim.Bind = LegitSilentAim.Toggle:AddBind({
+        enabled = true,
+        text = "silent",
+        tooltip = "Toggle on key press",
+        mode = "toggle",
+        bind = "None",
+        flag = "ToggleKey_1",
+        state = false,
+        risky = false,
+        noindicator = false,
+        callback = function(v)
+            return
+        end,
+        keycallback = function(v)
+            return
+        end
+    })
+
+    LegitSilentAim.Bindmode = LegitSilentAim.Section:AddList({
+        enabled = true,
+        text = "Bind mode", 
+        tooltip = "Select a bind mode",
+        selected = "Toggle",
+        multi = false,
+        open = false,
+        values = {"None", "Toggle", "Hold"},
+        risky = false,
+        callback = function(v)
+            LegitSilentAim.Bind:SetMode(v:lower())
+        end
+    })
+
+    LegitSilentAim.FOV = LegitSilentAim.Section:AddSlider({
+        enabled = true,
+        text = "FOV",
+        tooltip = "Adjust silent aim field of view",
+        flag = "Slider_1",
+        suffix = "°",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 180,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitSilentAim.Smoothing = LegitSilentAim.Section:AddSlider({
+        enabled = true,
+        text = "Accuracy",
+        tooltip = "Adjust silent aim accuracy",
+        flag = "Slider_1",
+        suffix = "%",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 100,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    local LegitTriggerbot = {
+        Section = LegitTab:AddSection("Triggerbot", 2)
+    }
+
+    LegitTriggerbot.Toggle = LegitTriggerbot.Section:AddToggle({
+        text = "Toggle",
+        state = false,
+        tooltip = "Toggle triggerbot",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+    
+    LegitTriggerbot.Bind = LegitTriggerbot.Toggle:AddBind({
+        enabled = true,
+        text = "triggerbot",
+        tooltip = "Toggle on key press",
+        mode = "toggle",
+        bind = "None",
+        flag = "ToggleKey_1",
+        state = false,
+        risky = false,
+        noindicator = false,
+        callback = function(v)
+            return
+        end,
+        keycallback = function(v)
+            return
+        end
+    })
+
+    LegitTriggerbot.Bindmode = LegitTriggerbot.Section:AddList({
+        enabled = true,
+        text = "Bind mode", 
+        tooltip = "Select a bind mode",
+        selected = "Toggle",
+        multi = false,
+        open = false,
+        values = {"None", "Toggle", "Hold"},
+        risky = false,
+        callback = function(v)
+            LegitTriggerbot.Bind:SetMode(v:lower())
+        end
+    })
+
+    LegitTriggerbot.FOV = LegitTriggerbot.Section:AddSlider({
+        enabled = true,
+        text = "Sensitivity",
+        tooltip = "Adjust triggerbot sensitivity",
+        flag = "Slider_1",
+        dragging = true,
+        focused = false,
+        min = 0.01,
+        max = 1,
+        increment = 0.01,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    local LegitAimAssist = {
+        Section = LegitTab:AddSection("Assist", 2)
+    }
+
+    LegitAimAssist.Toggle = LegitAimAssist.Section:AddToggle({
+        text = "Toggle",
+        state = false,
+        tooltip = "Toggle aim assist",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+    
+    LegitAimAssist.Bind = LegitAimAssist.Toggle:AddBind({
+        enabled = true,
+        text = "assist",
+        tooltip = "Toggle on key press",
+        mode = "toggle",
+        bind = "None",
+        flag = "ToggleKey_1",
+        state = false,
+        risky = false,
+        noindicator = false,
+        callback = function(v)
+            return
+        end,
+        keycallback = function(v)
+            return
+        end
+    })
+
+    LegitAimAssist.Bindmode = LegitAimAssist.Section:AddList({
+        enabled = true,
+        text = "Bind mode", 
+        tooltip = "Select a bind mode",
+        selected = "Toggle",
+        multi = false,
+        open = false,
+        values = {"None", "Toggle", "Hold"},
+        risky = false,
+        callback = function(v)
+            LegitAimAssist.Bind:SetMode(v:lower())
+        end
+    })
+
+    LegitAimAssist.FOV = LegitAimAssist.Section:AddSlider({
+        enabled = true,
+        text = "FOV",
+        tooltip = "Adjust aim assist field of view",
+        flag = "Slider_1",
+        suffix = "°",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 180,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitAimAssist.Strength = LegitAimAssist.Section:AddSlider({
+        enabled = true,
+        text = "Strength",
+        tooltip = "Adjust aim assist strength",
+        flag = "Slider_1",
+        dragging = true,
+        focused = false,
+        min = 0.01,
+        max = 1,
+        increment = 0.01,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    local LegitOther = {
+        Section = LegitTab:AddSection("Other", 2)
+    }
+
+    LegitOther.AimbotFOV = LegitOther.Section:AddToggle({
+        text = "Aimbot FOV",
+        state = false,
+        tooltip = "Toggle aimbot FOV visualization",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitOther.AimbotFOVColor = LegitOther.AimbotFOV:AddColor({
+        enabled = true,
+        text = "Color",
+        tooltip = "Aimbot FOV color",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "Color_1",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    LegitOther.SilentFOV = LegitOther.Section:AddToggle({
+        text = "Silent FOV",
+        state = false,
+        tooltip = "Toggle silent aim FOV visualization",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitOther.SilentFOVColor = LegitOther.SilentFOV:AddColor({
+        enabled = true,
+        text = "Color",
+        tooltip = "Silent aim FOV color",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "Color_1",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    LegitOther.TriggerbotFOV = LegitOther.Section:AddToggle({
+        text = "Triggerbot FOV",
+        state = false,
+        tooltip = "Toggle triggerbot FOV visualization",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitOther.TriggerbotFOVColor = LegitOther.TriggerbotFOV:AddColor({
+        enabled = true,
+        text = "Color",
+        tooltip = "Triggerbot FOV color",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "Color_1",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    LegitOther.AimAssistFOV = LegitOther.Section:AddToggle({
+        text = "Assist FOV",
+        state = false,
+        tooltip = "Toggle aim assist FOV visualization",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitOther.AimAssistFOVColor = LegitOther.AimAssistFOV:AddColor({
+        enabled = true,
+        text = "Color",
+        tooltip = "Aim assist FOV color",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "Color_1",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
 end
+
+local Hooks = HookRegistry()
 
 OnLoad()
 CreateMenu()
-
-local Hooks = HookRegistry()
 
 Hooks:Register("onInit", function()
     local Time = (string.format("%."..tostring(4).."f", os.clock() - Clock))
