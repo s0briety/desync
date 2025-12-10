@@ -556,7 +556,7 @@ function library:init()
                     elseif option.class == 'slider' then
                         option:SetValue(value == nil and 0 or value)
                     elseif option.class == 'bind' then
-                        option:SetBind(value == nil and 'None' or
+                        option:SetBind(value == nil and 'none' or
                                            (utility:HasProperty(Enum.KeyCode, value) and Enum.KeyCode[value] or
                                                Enum.UserInputType[value]));
                     elseif option.class == 'color' then
@@ -1769,7 +1769,7 @@ function library:init()
 
                                         if currentList.multi then
                                             for i, v in next, currentSelected do
-                                                if v ~= "None" then
+                                                if v ~= "none" then
                                                     newSelected[i] = v;
                                                 end
                                             end
@@ -2360,7 +2360,7 @@ function library:init()
                             flag = data.flag,
                             text = '',
                             tooltip = '',
-                            bind = 'None',
+                            bind = 'none',
                             mode = 'toggle',
                             order = #self.options + 1,
                             callback = function()
@@ -2394,7 +2394,7 @@ function library:init()
                             library.options[bind.flag] = bind;
                         end
 
-                        if bind.bind == 'None' then
+                        if bind.bind == 'none' then
                             bind.state = true
                             if bind.flag then
                                 library.flags[bind.flag] = bind.state;
@@ -2460,7 +2460,7 @@ function library:init()
                             local keyName = 'NONE'
                             self.bind = (keybind and keybind) or keybind or self.bind
                             if self.bind == Enum.KeyCode.Backspace then
-                                self.bind = 'None';
+                                self.bind = 'none';
 
                                 if bind.flag then
                                     library.flags[bind.flag] = bind.state;
@@ -2474,7 +2474,7 @@ function library:init()
                             else
                                 keyName = keyNames[keybind] or keybind.Name or keybind
                             end
-                            if self.bind ~= 'None' then
+                            if self.bind ~= 'none' then
                                 bind.state = false
                                 if bind.flag then
                                     library.flags[bind.flag] = bind.state;
@@ -2491,7 +2491,7 @@ function library:init()
                             self.indicatorValue:SetKey((self.text == nil or self.text == '') and
                                                            (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
                             self.indicatorValue:SetValue('[' .. keyName:upper() .. ']');
-                            if self.bind == 'None' then
+                            if self.bind == 'none' then
 
                             end
                             self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
@@ -2515,7 +2515,7 @@ function library:init()
                                                 not bind.nomouse) and inp.UserInputType
                                 bind:SetBind(key or (not table.find(blacklistedKeys, inp.KeyCode)) and inp.KeyCode)
                                 bind.binding = false
-                            elseif not bind.binding and self.bind == 'None' then
+                            elseif not bind.binding and self.bind == 'none' then
                                 bind.state = true
                                 library.flags[bind.flag] = bind.state
                                 local display = bind.state;
@@ -2568,7 +2568,7 @@ function library:init()
                         end)
 
                         utility:Connection(inputservice.InputEnded, function(inp)
-                            if bind.bind ~= 'None' then
+                            if bind.bind ~= 'none' then
                                 if inp.KeyCode == bind.bind or inp.UserInputType == bind.bind then
                                     if c then
                                         c:Disconnect();
@@ -2878,7 +2878,7 @@ function library:init()
                             objs.inputText = utility:Draw('Text', {
                                 Position = newUDim2(0, 4, 0, 0),
                                 ThemeColor = 'Option Text 2',
-                                Text = 'None',
+                                Text = 'none',
                                 Size = 13,
                                 Font = 2,
                                 ZIndex = z + 5,
@@ -4054,7 +4054,7 @@ function library:init()
                         flag = data.flag,
                         text = '',
                         tooltip = '',
-                        bind = 'None',
+                        bind = 'none',
                         mode = 'toggle',
                         order = #self.options + 1,
                         callback = function()
@@ -4157,7 +4157,7 @@ function library:init()
                         local keyName = 'NONE'
                         self.bind = (keybind and keybind) or keybind or self.bind
                         if self.bind == Enum.KeyCode.Backspace then
-                            self.bind = 'None';
+                            self.bind = 'none';
                         else
                             keyName = keyNames[keybind] or keybind.Name or keybind
                         end
@@ -4184,7 +4184,7 @@ function library:init()
                                             not bind.nomouse) and inp.UserInputType
                             bind:SetBind(key or (not table.find(blacklistedKeys, inp.KeyCode)) and inp.KeyCode)
                             bind.binding = false
-                        elseif not bind.binding and self.bind == 'None' then
+                        elseif not bind.binding and self.bind == 'none' then
                             bind.state = true
                             library.flags[bind.flag] = bind.state
                         elseif (inp.KeyCode == bind.bind or inp.UserInputType == bind.bind) and not bind.binding then
@@ -4224,7 +4224,7 @@ function library:init()
                     end)
 
                     utility:Connection(inputservice.InputEnded, function(inp)
-                        if bind.bind ~= 'None' then
+                        if bind.bind ~= 'none' then
                             if inp.KeyCode == bind.bind or inp.UserInputType == bind.key then
                                 if c then
                                     c:Disconnect();
@@ -4350,7 +4350,7 @@ function library:init()
                         objs.inputText = utility:Draw('Text', {
                             Position = newUDim2(0, 4, 0, 0),
                             ThemeColor = 'Option Text 2',
-                            Text = 'None',
+                            Text = 'none',
                             Size = 13,
                             Font = 2,
                             ZIndex = z + 5,

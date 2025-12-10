@@ -13,11 +13,8 @@ local function class(base, init)
     mt.__call = function(class_tbl, ...)
         local obj = {}
         setmetatable(obj, c)
-        if init then
-            init(obj, ...)
-        elseif base and base.init then
-            base.init(obj, ...)
-        end
+        local ctor = class_tbl.init or init or (base and base.init)
+        if ctor then ctor(obj, ...) end
         return obj
     end
     c.init = init
@@ -184,7 +181,31 @@ function HookRegistry:_CreateSignal(name)
     return signal
 end
 
+function HookRegistry:_EnsureState()
+    -- Defensive initializer in case construction was skipped or state was cleared
+    if self.hooks and self.eventSignals then return end
+
+    self.hooks = self.hooks or {}
+    self.callbackCounter = self.callbackCounter or 0
+    if not self.eventSignals then
+        self.eventSignals = {
+            onInit = self:_CreateSignal("onInit"),
+            onRenderStepped = self:_CreateSignal("onRenderStepped"),
+            onHeartbeat = self:_CreateSignal("onHeartbeat"),
+            onPlayerAdded = self:_CreateSignal("onPlayerAdded"),
+            onPlayerRemoving = self:_CreateSignal("onPlayerRemoving"),
+            onCustom = {}
+        }
+    end
+
+    if self.initialized == nil then
+        self.initialized = false
+    end
+end
+
 function HookRegistry:Register(eventName, callback, name)
+    self:_EnsureState()
+
     if not self.hooks[eventName] then
         self.hooks[eventName] = {}
     end
@@ -205,6 +226,8 @@ function HookRegistry:Register(eventName, callback, name)
 end
 
 function HookRegistry:RegisterCustom(customEventName, callback, name)
+    self:_EnsureState()
+
     if not name then
         self.callbackCounter = self.callbackCounter + 1
         name = "callback_" .. self.callbackCounter
@@ -231,12 +254,16 @@ function HookRegistry:RegisterCustom(customEventName, callback, name)
 end
 
 function HookRegistry:Fire(eventName, ...)
+    self:_EnsureState()
+
     if self.eventSignals[eventName] then
         self.eventSignals[eventName]:Fire(...)
     end
 end
 
 function HookRegistry:FireCustom(customEventName, ...)
+    self:_EnsureState()
+
     if self.eventSignals.onCustom[customEventName] then
         self.eventSignals.onCustom[customEventName]:Fire(...)
     end
@@ -262,6 +289,8 @@ function HookRegistry:Remove(eventName, hookName, callback)
 end
 
 function HookRegistry:Initialize()
+    self:_EnsureState()
+
     if self.initialized then return end
     self.initialized = true
 
