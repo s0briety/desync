@@ -66,7 +66,7 @@ local library = {
         ['Eight'] = 8,
         ['Nine'] = 9
     },
-    signal = loadstring(game:HttpGet('https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/signal.lua'))();
+    signal = loadstring(game:HttpGet('https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/modules/signal.lua'))();
     open = false,
     opening = false,
     hasInit = false,

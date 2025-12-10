@@ -1,319 +1,25 @@
--- Class addon --
-
-local function class(base, init)
-    local c = {}
-    if base then
-        for i, v in pairs(base) do
-            c[i] = v
-        end
-        c._base = base
-    end
-    c.__index = c
-    local mt = {}
-    mt.__call = function(class_tbl, ...)
-        local obj = {}
-        setmetatable(obj, c)
-        local ctor = class_tbl.init or init or (base and base.init)
-        if ctor then ctor(obj, ...) end
-        return obj
-    end
-    c.init = init
-    setmetatable(c, mt)
-    return c
-end   
-
 -- Begin script --
+_DEBUG = true
+
+local repo = "https://raw.githubusercontent.com/s0briety/desync/refs/heads/main"
+
+local ls, gs, lp = function(u, d)
+    return loadstring(game:HttpGet(u))(d)
+end, function(s)
+    return game:GetService(s)
+end, game.Players.LocalPlayer
+
+local HookRegistry = ls(repo .. '/modules/hooking.lua')
 
 local Services = {
-    RunService = game:GetService("RunService"),
-    HTTPService = game:GetService("HttpService"),
-    TeleportService = game:GetService("TeleportService"),
-    MarketplaceService = game:GetService("MarketplaceService"),
+    RunService = gs("RunService"),
+    HTTPService = gs("HttpService"),
+    TeleportService = gs("TeleportService"),
+    MarketplaceService = gs("MarketplaceService"),
+    TextChatService = gs("TextChatService"),
+    Lighting = gs("Lighting"),
+    Players = gs("Players")
 }
-
--- Hooking --
-
-local Hook = class()
-
-function Hook:init(name)
-    self.name = name
-    self.callbacks = {}
-    self.connections = {}
-    self.enabled = true
-end
-
-function Hook:Add(callback)
-    if type(callback) ~= "function" then
-        error("Callback must be a function", 2)
-    end
-    
-    table.insert(self.callbacks, callback)
-    return callback
-end
-
-function Hook:Connect(signal)
-    if not self.enabled then return end
-    
-    local connection = signal:Connect(function(...)
-        if self.enabled then
-            for _, callback in ipairs(self.callbacks) do
-                if callback then
-                    callback(...)
-                end
-            end
-        end
-    end)
-    
-    table.insert(self.connections, connection)
-    return connection
-end
-
-function Hook:Remove(callback)
-    for i, cb in ipairs(self.callbacks) do
-        if cb == callback then
-            table.remove(self.callbacks, i)
-            return true
-        end
-    end
-    return false
-end
-
-function Hook:Disconnect()
-    for _, connection in ipairs(self.connections) do
-        if connection then
-            connection:Disconnect()
-        end
-    end
-    self.connections = {}
-    self.callbacks = {}
-end
-
-function Hook:Enable()
-    self.enabled = true
-end
-
-function Hook:Disable()
-    self.enabled = false
-end
-
-local HookRegistry = class()
-
-function HookRegistry:init()
-    self.hooks = {}
-    self.callbackCounter = 0
-    
-    local function createSignal(name)
-        local signal = {}
-        signal._name = name
-        signal._connections = {}
-        
-        function signal:Connect(callback)
-            local connection = {
-                Connected = true,
-                Disconnect = function(self)
-                    self.Connected = false
-                    for i, conn in ipairs(signal._connections) do
-                        if conn == self then
-                            table.remove(signal._connections, i)
-                            break
-                        end
-                    end
-                end
-            }
-            connection._callback = callback
-            table.insert(signal._connections, connection)
-            return connection
-        end
-        
-        function signal:Fire(...)
-            for _, connection in ipairs(self._connections) do
-                if connection.Connected then
-                    connection._callback(...)
-                end
-            end
-        end
-        
-        return signal
-    end
-    
-    self.eventSignals = {
-        onInit = createSignal("onInit"),
-        onRenderStepped = createSignal("onRenderStepped"),
-        onHeartbeat = createSignal("onHeartbeat"),
-        onPlayerAdded = createSignal("onPlayerAdded"),
-        onPlayerRemoving = createSignal("onPlayerRemoving"),
-        onCustom = {}
-    }
-    self.initialized = false
-end
-
-function HookRegistry:_CreateSignal(name)
-    local signal = {}
-    signal._name = name
-    signal._connections = {}
-    
-    function signal:Connect(callback)
-        local connection = {
-            Connected = true,
-            Disconnect = function(self)
-                self.Connected = false
-                for i, conn in ipairs(signal._connections) do
-                    if conn == self then
-                        table.remove(signal._connections, i)
-                        break
-                    end
-                end
-            end
-        }
-        connection._callback = callback
-        table.insert(signal._connections, connection)
-        return connection
-    end
-    
-    function signal:Fire(...)
-        for _, connection in ipairs(self._connections) do
-            if connection.Connected then
-                connection._callback(...)
-            end
-        end
-    end
-    
-    return signal
-end
-
-function HookRegistry:_EnsureState()
-    -- Defensive initializer in case construction was skipped or state was cleared
-    if self.hooks and self.eventSignals then return end
-
-    self.hooks = self.hooks or {}
-    self.callbackCounter = self.callbackCounter or 0
-    if not self.eventSignals then
-        self.eventSignals = {
-            onInit = self:_CreateSignal("onInit"),
-            onRenderStepped = self:_CreateSignal("onRenderStepped"),
-            onHeartbeat = self:_CreateSignal("onHeartbeat"),
-            onPlayerAdded = self:_CreateSignal("onPlayerAdded"),
-            onPlayerRemoving = self:_CreateSignal("onPlayerRemoving"),
-            onCustom = {}
-        }
-    end
-
-    if self.initialized == nil then
-        self.initialized = false
-    end
-end
-
-function HookRegistry:Register(eventName, callback, name)
-    self:_EnsureState()
-
-    if not self.hooks[eventName] then
-        self.hooks[eventName] = {}
-    end
-
-    if not name then
-        self.callbackCounter = self.callbackCounter + 1
-        name = "callback_" .. self.callbackCounter
-    end
-    
-    if not self.hooks[eventName][name] then
-        self.hooks[eventName][name] = Hook(name)
-        if self.eventSignals[eventName] then
-            self.hooks[eventName][name]:Connect(self.eventSignals[eventName])
-        end
-    end
-    
-    return self.hooks[eventName][name]:Add(callback)
-end
-
-function HookRegistry:RegisterCustom(customEventName, callback, name)
-    self:_EnsureState()
-
-    if not name then
-        self.callbackCounter = self.callbackCounter + 1
-        name = "callback_" .. self.callbackCounter
-    end
-    
-    if not self.eventSignals.onCustom[customEventName] then
-        self.eventSignals.onCustom[customEventName] = self:_CreateSignal(customEventName)
-    end
-    
-    if not self.hooks.onCustom then
-        self.hooks.onCustom = {}
-    end
-    
-    if not self.hooks.onCustom[customEventName] then
-        self.hooks.onCustom[customEventName] = {}
-    end
-    
-    if not self.hooks.onCustom[customEventName][name] then
-        self.hooks.onCustom[customEventName][name] = Hook(name)
-        self.hooks.onCustom[customEventName][name]:Connect(self.eventSignals.onCustom[customEventName])
-    end
-    
-    return self.hooks.onCustom[customEventName][name]:Add(callback)
-end
-
-function HookRegistry:Fire(eventName, ...)
-    self:_EnsureState()
-
-    if self.eventSignals[eventName] then
-        self.eventSignals[eventName]:Fire(...)
-    end
-end
-
-function HookRegistry:FireCustom(customEventName, ...)
-    self:_EnsureState()
-
-    if self.eventSignals.onCustom[customEventName] then
-        self.eventSignals.onCustom[customEventName]:Fire(...)
-    end
-end
-
-function HookRegistry:Get(eventName, hookName)
-    if self.hooks[eventName] and self.hooks[eventName][hookName] then
-        return self.hooks[eventName][hookName]
-    end
-end
-
-function HookRegistry:Remove(eventName, hookName, callback)
-    if self.hooks[eventName] and self.hooks[eventName][hookName] then
-        if callback then
-            return self.hooks[eventName][hookName]:Remove(callback)
-        else
-            self.hooks[eventName][hookName]:Disconnect()
-            self.hooks[eventName][hookName] = nil
-            return true
-        end
-    end
-    return false
-end
-
-function HookRegistry:Initialize()
-    self:_EnsureState()
-
-    if self.initialized then return end
-    self.initialized = true
-
-    self:Fire("onInit")
-    
-    Services.RunService.RenderStepped:Connect(function()
-        self:Fire("onRenderStepped")
-    end)
-    
-    Services.RunService.Heartbeat:Connect(function()
-        self:Fire("onHeartbeat")
-    end)
-    
-    game.Players.PlayerAdded:Connect(function(player)
-        self:Fire("onPlayerAdded", player)
-    end)
-    
-    game.Players.PlayerRemoving:Connect(function(player)
-        self:Fire("onPlayerRemoving", player)
-    end)
-end
-
-_DEBUG = true
 
 local Metadata = {
     cheat = "desync",
@@ -323,11 +29,11 @@ local Metadata = {
     user = {
         name = game.Players.LocalPlayer.Name or "N/A",
         id = game.Players.LocalPlayer.UserId or 0
-    },
+    }
 }
 
 local GameMap = {
-    ["2788229376"] = "Da Hood",
+    ["2788229376"] = "Da Hood"
 }
 
 local Utility = {
@@ -369,6 +75,7 @@ local Utility = {
 }
 
 local UI, Clock = nil, nil
+local Menu = {}
 
 local OnLoad = function()
     Metadata.game = Utility.ResolveGame(game.PlaceId)
@@ -376,23 +83,23 @@ local OnLoad = function()
     local build = Metadata.build
 
     if build ~= "release" then
-        version_str = version_str .. " [" .. build .. "]"    
+        version_str = version_str .. " [" .. build .. "]"
     end
 
-    UI, Clock = loadstring(game:HttpGet("https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/ui.lua"))({
+    UI, Clock = ls(repo .. '/modules/ui.lua', {
         cheatname = Metadata.cheat,
         version = version_str,
-        gamename = Metadata.game,
+        gamename = Metadata.game
     }), os.clock()
 end
 
 local CreateMenu = function()
     UI:init()
 
-    local MainWindow  = UI.NewWindow({
+    local MainWindow = UI.NewWindow({
         title = string.format("%s | %s", Metadata.cheat, Metadata.build),
-        size = UDim2.new(0, 510, 0.6, 6
-    )})
+        size = UDim2.new(0, 510, 0.6, 6)
+    })
 
     local LegitTab = MainWindow:AddTab(Utility.center_pad("Legit", 8))
     local RageTab = MainWindow:AddTab(Utility.center_pad("Rage", 8))
@@ -401,53 +108,9 @@ local CreateMenu = function()
     local OtherTab = MainWindow:AddTab(Utility.center_pad("Other", 8))
     local SettingsTab = UI:CreateSettingsTab(MainWindow)
 
-    local Legitbot = {
-        Section = LegitTab:AddSection("Legitbot", 1)
-    }
-
-    Legitbot.Toggle = Legitbot.Section:AddToggle({
-        text = "Toggle",
-        state = false,
-        tooltip = "Toggle legitbot features",
-        flag = "Toggle_1",
-        callback = function(v)
-            return
-        end
-    })
-    
-    Legitbot.Bind = Legitbot.Toggle:AddBind({
-        enabled = true,
-        text = "Key",
-        tooltip = "Toggle on key press",
-        mode = "toggle",
-        bind = "None",
-        flag = "ToggleKey_1",
-        state = false,
-        risky = false,
-        noindicator = false,
-        callback = function(v)
-            return
-        end,
-        keycallback = function(v)
-            return
-        end
-    })
-
-    Legitbot.Bindmode = Legitbot.Section:AddList({
-        enabled = true,
-        text = "Bind Mode", 
-        tooltip = "Select a bind mode",
-        selected = "Toggle",
-        multi = false,
-        open = false,
-        values = {"None", "Toggle", "Hold"},
-        risky = false,
-        callback = function(v)
-            Legitbot.Bind:SetMode(v:lower())
-        end
-    })
-
-    -- Legit Tab --
+    ---
+    --- LEGIT TAB (Column 1)
+    ---
 
     local LegitAimbot = {
         Section = LegitTab:AddSection("Aimbot", 1)
@@ -457,19 +120,19 @@ local CreateMenu = function()
         text = "Toggle",
         state = false,
         tooltip = "Toggle legit aimbot",
-        flag = "Toggle_1",
+        flag = "LegitAimbot_Toggle",
         callback = function(v)
             return
         end
     })
-    
+
     LegitAimbot.Bind = LegitAimbot.Toggle:AddBind({
         enabled = true,
-        text = "aimbot",
+        text = "Aimbot Key",
         tooltip = "Toggle on key press",
         mode = "toggle",
         bind = "None",
-        flag = "ToggleKey_1",
+        flag = "LegitAimbot_BindKey",
         state = false,
         risky = false,
         noindicator = false,
@@ -483,8 +146,8 @@ local CreateMenu = function()
 
     LegitAimbot.Bindmode = LegitAimbot.Section:AddList({
         enabled = true,
-        text = "Bind Mode", 
-        tooltip = "Select a bind mode",
+        text = "Bind Mode",
+        tooltip = "Select a bind mode (Toggle/Hold)",
         selected = "Toggle",
         multi = false,
         open = false,
@@ -499,15 +162,53 @@ local CreateMenu = function()
 
     LegitAimbot.Aimbotmode = LegitAimbot.Section:AddList({
         enabled = true,
-        text = "Aimbot Mode", 
-        tooltip = "Select an aimbot mode",
+        text = "Mode",
+        tooltip = "Select an aimbot mode (Camera/Mouse/Silent)",
         selected = "Camera",
         multi = false,
         open = false,
         values = {"Camera", "Mouse", "Silent"},
         risky = false,
         callback = function(v)
+        end
+    })
 
+    LegitAimbot.DrawFOV = LegitAimbot.Section:AddToggle({
+        text = "Draw FOV Circle",
+        state = false,
+        tooltip = "Display the aimbot field of view on screen",
+        flag = "LegitAimbot_DrawFOV",
+        callback = function(v)
+            return
+        end
+    })
+
+    LegitAimbot.FOVColor = LegitAimbot.DrawFOV:AddColor({
+        enabled = true,
+        text = "FOV Circle Color",
+        tooltip = "Color of the FOV circle",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "LegitAimbot_FOVColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    LegitAimbot.FOVThickness = LegitAimbot.DrawFOV:AddSlider({
+        enabled = true,
+        text = "FOV Line Thickness",
+        tooltip = "Thickness of the FOV circle border",
+        flag = "LegitAimbot_FOVThickness",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 5,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            return
         end
     })
 
@@ -515,7 +216,7 @@ local CreateMenu = function()
         enabled = true,
         text = "FOV",
         tooltip = "Adjust aimbot field of view",
-        flag = "Slider_1",
+        flag = "LegitAimbot_FOV",
         suffix = "°",
         dragging = true,
         focused = false,
@@ -531,8 +232,8 @@ local CreateMenu = function()
     LegitAimbot.Smoothing = LegitAimbot.Section:AddSlider({
         enabled = true,
         text = "Smoothing",
-        tooltip = "Adjust aimbot smoothing; Does not affect silent aim",
-        flag = "Slider_1",
+        tooltip = "Adjust aimbot smoothing; Does not affect Silent Aim",
+        flag = "LegitAimbot_Smoothing",
         dragging = true,
         focused = false,
         min = 0.01,
@@ -547,8 +248,8 @@ local CreateMenu = function()
     LegitAimbot.Accuracy = LegitAimbot.Section:AddSlider({
         enabled = true,
         text = "Accuracy",
-        tooltip = "Adjust aimbot accuracy",
-        flag = "Slider_1",
+        tooltip = "Adjust aimbot accuracy (how close it aims to the center of the hitbox)",
+        flag = "LegitAimbot_Accuracy",
         suffix = "%",
         dragging = true,
         focused = false,
@@ -561,63 +262,71 @@ local CreateMenu = function()
         end
     })
 
+    Menu["LegitAimbot"] = LegitAimbot
+
+    -- Targeting Section for Aimbot (Legit Tab - Column 1)
     local LegitAimbotTargeting = {
         Section = LegitTab:AddSection("Targeting", 1)
     }
 
     LegitAimbotTargeting.Hitboxes = LegitAimbotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot Hitboxes", 
-        tooltip = "Configure aimbot hitboxes",
+        text = "Enabled Hitboxes",
+        tooltip = "Hitboxes the aimbot can target",
         multi = true,
         open = false,
-        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs",
+                  "Feet"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     LegitAimbotTargeting.PreferredHitboxes = LegitAimbotTargeting.Section:AddList({
         enabled = true,
-        text = "Hitbox Priority", 
-        tooltip = "Configure preferred aimbot hitboxes",
+        text = "Hitbox Priority",
+        tooltip = "Order of preferred hitboxes to target",
         multi = true,
         open = false,
-        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs",
+                  "Feet"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     LegitAimbotTargeting.Priority = LegitAimbotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot Priority", 
-        tooltip = "Choose target selection",
+        text = "Target Priority",
+        tooltip = "Choose target selection (Closest, Crosshair, etc.)",
         selected = "Closest",
         multi = false,
         open = false,
         values = {"Closest", "Crosshair", "Least HP", "Most HP"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     LegitAimbotTargeting.Conditions = LegitAimbotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot Conditions", 
-        tooltip = "Configure aimbot conditions",
+        text = "Conditions",
+        tooltip = "Conditions a target must meet to be aimed at",
         multi = true,
         open = false,
-        values = {"Target Alive", "Immunity Check", "Visibility Check"},
+        values = {"Target Alive", "Immunity Check", "Visibility Check", "Team Check", "Is Moving"},
         risky = false,
         callback = function(v)
-
         end
     })
 
+    Menu["LegitAimbotTargeting"] = LegitAimbotTargeting
+
+    ---
+    --- LEGIT TAB (Column 2)
+    ---
+
+    -- Triggerbot Section (Legit Tab - Column 2)
     local LegitTriggerbot = {
         Section = LegitTab:AddSection("Triggerbot", 2)
     }
@@ -625,20 +334,20 @@ local CreateMenu = function()
     LegitTriggerbot.Toggle = LegitTriggerbot.Section:AddToggle({
         text = "Toggle",
         state = false,
-        tooltip = "Toggle triggerbot",
-        flag = "Toggle_1",
+        tooltip = "Toggle triggerbot (automatically shoots when target is under crosshair)",
+        flag = "LegitTriggerbot_Toggle",
         callback = function(v)
             return
         end
     })
-    
+
     LegitTriggerbot.Bind = LegitTriggerbot.Toggle:AddBind({
         enabled = true,
-        text = "triggerbot",
-        tooltip = "Toggle on key press",
+        text = "Trigger Key",
+        tooltip = "Toggle or Hold on key press",
         mode = "toggle",
         bind = "None",
-        flag = "ToggleKey_1",
+        flag = "LegitTriggerbot_BindKey",
         state = false,
         risky = false,
         noindicator = false,
@@ -652,8 +361,8 @@ local CreateMenu = function()
 
     LegitTriggerbot.Bindmode = LegitTriggerbot.Section:AddList({
         enabled = true,
-        text = "Bind Mode", 
-        tooltip = "Select a bind mode",
+        text = "Bind Mode",
+        tooltip = "Select a bind mode (Toggle/Hold)",
         selected = "Toggle",
         multi = false,
         open = false,
@@ -664,11 +373,25 @@ local CreateMenu = function()
         end
     })
 
-    LegitTriggerbot.FOV = LegitTriggerbot.Section:AddSlider({
+    LegitTriggerbot.Section:AddSeparator({})
+
+    LegitTriggerbot.Hitboxes = LegitTriggerbot.Section:AddList({
         enabled = true,
-        text = "Sensitivity",
-        tooltip = "Adjust triggerbot sensitivity",
-        flag = "Slider_1",
+        text = "Trigger Hitboxes",
+        tooltip = "Hitboxes that will trigger the shot",
+        multi = true,
+        open = false,
+        values = {"Head", "Torso", "Limb"},
+        risky = false,
+        callback = function(v)
+        end
+    })
+
+    LegitTriggerbot.Delay = LegitTriggerbot.Section:AddSlider({
+        enabled = true,
+        text = "Pre-Shot Delay",
+        tooltip = "Time (in seconds) to wait before firing",
+        flag = "LegitTriggerbot_Delay",
         dragging = true,
         focused = false,
         min = 0.01,
@@ -680,19 +403,37 @@ local CreateMenu = function()
         end
     })
 
-    LegitTriggerbot.Conditions = LegitTriggerbot.Section:AddList({
+    LegitTriggerbot.MinDamage = LegitTriggerbot.Section:AddSlider({
         enabled = true,
-        text = "Triggerbot Conditions", 
-        tooltip = "Configure triggerbot conditions",
-        multi = true,
-        open = false,
-        values = {"Target Alive", "Immunity Check", "Visibility Check"},
+        text = "Min Damage",
+        tooltip = "Minimum expected damage to trigger a shot",
+        flag = "LegitTriggerbot_MinDamage",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 100,
+        increment = 1,
         risky = false,
         callback = function(v)
-
+            return
         end
     })
 
+    LegitTriggerbot.Conditions = LegitTriggerbot.Section:AddList({
+        enabled = true,
+        text = "Conditions",
+        tooltip = "Conditions a target must meet to trigger a shot",
+        multi = true,
+        open = false,
+        values = {"Target Alive", "Immunity Check"},
+        risky = false,
+        callback = function(v)
+        end
+    })
+
+    Menu["LegitTriggerbot"] = LegitTriggerbot
+
+    -- Aim Assist Section (Legit Tab - Column 2)
     local LegitAimAssist = {
         Section = LegitTab:AddSection("Assist", 2)
     }
@@ -700,20 +441,20 @@ local CreateMenu = function()
     LegitAimAssist.Toggle = LegitAimAssist.Section:AddToggle({
         text = "Toggle",
         state = false,
-        tooltip = "Toggle aim assist",
-        flag = "Toggle_1",
+        tooltip = "Toggle mouse aim assist (snaps/slows mouse to target)",
+        flag = "LegitAimAssist_Toggle",
         callback = function(v)
             return
         end
     })
-    
+
     LegitAimAssist.Bind = LegitAimAssist.Toggle:AddBind({
         enabled = true,
-        text = "assist",
-        tooltip = "Toggle on key press",
+        text = "Assist Key",
+        tooltip = "Toggle or Hold on key press",
         mode = "toggle",
         bind = "None",
-        flag = "ToggleKey_1",
+        flag = "LegitAimAssist_BindKey",
         state = false,
         risky = false,
         noindicator = false,
@@ -727,8 +468,8 @@ local CreateMenu = function()
 
     LegitAimAssist.Bindmode = LegitAimAssist.Section:AddList({
         enabled = true,
-        text = "Bind Mode", 
-        tooltip = "Select a bind mode",
+        text = "Bind Mode",
+        tooltip = "Select a bind mode (Toggle/Hold)",
         selected = "Toggle",
         multi = false,
         open = false,
@@ -739,11 +480,13 @@ local CreateMenu = function()
         end
     })
 
+    LegitAimAssist.Section:AddSeparator({})
+
     LegitAimAssist.FOV = LegitAimAssist.Section:AddSlider({
         enabled = true,
         text = "FOV",
         tooltip = "Adjust aim assist field of view",
-        flag = "Slider_1",
+        flag = "LegitAimAssist_FOV",
         suffix = "°",
         dragging = true,
         focused = false,
@@ -759,8 +502,8 @@ local CreateMenu = function()
     LegitAimAssist.Strength = LegitAimAssist.Section:AddSlider({
         enabled = true,
         text = "Strength",
-        tooltip = "Adjust aim assist strength",
-        flag = "Slider_1",
+        tooltip = "Adjust aim assist strength (how hard it pulls/slows)",
+        flag = "LegitAimAssist_Strength",
         dragging = true,
         focused = false,
         min = 0.01,
@@ -772,80 +515,53 @@ local CreateMenu = function()
         end
     })
 
-    local LegitOther = {
-        Section = LegitTab:AddSection("Other", 2)
-    }
-
-    LegitOther.AimbotFOV = LegitOther.Section:AddToggle({
-        text = "FOV",
+    LegitAimAssist.RCS = LegitAimAssist.Section:AddToggle({
+        text = "Recoil Control (RCS)",
         state = false,
-        tooltip = "Toggle aimbot FOV visualization",
-        flag = "Toggle_1",
+        tooltip = "Automatically compensates for weapon recoil",
+        flag = "LegitAimAssist_RCS_Toggle",
         callback = function(v)
             return
         end
     })
 
-    LegitOther.AimbotFOVColor = LegitOther.AimbotFOV:AddColor({
+    LegitAimAssist.RCSStrengthX = LegitAimAssist.RCS:AddSlider({
         enabled = true,
-        text = "Color",
-        tooltip = "Aimbot FOV color",
-        color = Color3.fromRGB(255, 255, 255),
-        flag = "Color_1",
-        open = false,
+        text = "Horizontal Strength",
+        tooltip = "Horizontal compensation factor (0.0 to 1.0)",
+        flag = "LegitAimAssist_RCSStrengthX",
+        dragging = true,
+        focused = false,
+        min = 0,
+        max = 1,
+        increment = 0.01,
         risky = false,
-        callback = function()
-            return
-        end
-    })
-
-    LegitOther.TriggerbotFOV = LegitOther.Section:AddToggle({
-        text = "Triggerbot FOV",
-        state = false,
-        tooltip = "Toggle triggerbot FOV visualization",
-        flag = "Toggle_1",
         callback = function(v)
             return
         end
     })
 
-    LegitOther.TriggerbotFOVColor = LegitOther.TriggerbotFOV:AddColor({
+    LegitAimAssist.RCSStrengthY = LegitAimAssist.RCS:AddSlider({
         enabled = true,
-        text = "Color",
-        tooltip = "Triggerbot FOV color",
-        color = Color3.fromRGB(255, 255, 255),
-        flag = "Color_1",
-        open = false,
+        text = "Vertical Strength",
+        tooltip = "Vertical compensation factor (0.0 to 1.0)",
+        flag = "LegitAimAssist_RCSStrengthY",
+        dragging = true,
+        focused = false,
+        min = 0,
+        max = 1,
+        increment = 0.01,
         risky = false,
-        callback = function()
-            return
-        end
-    })
-
-    LegitOther.AimAssistFOV = LegitOther.Section:AddToggle({
-        text = "Assist FOV",
-        state = false,
-        tooltip = "Toggle aim assist FOV visualization",
-        flag = "Toggle_1",
         callback = function(v)
             return
         end
     })
 
-    LegitOther.AimAssistFOVColor = LegitOther.AimAssistFOV:AddColor({
-        enabled = true,
-        text = "Color",
-        tooltip = "Aim assist FOV color",
-        color = Color3.fromRGB(255, 255, 255),
-        flag = "Color_1",
-        open = false,
-        risky = false,
-        callback = function()
-            return
-        end
-    })
+    Menu["LegitAimAssist"] = LegitAimAssist
 
-    -- Rage Tab --
+    ---
+    --- RAGE TAB (Column 1)
+    ---
 
     local Ragebot = {
         Section = RageTab:AddSection("Ragebot", 1)
@@ -855,7 +571,7 @@ local CreateMenu = function()
         text = "Toggle",
         state = false,
         tooltip = "Toggle ragebot features",
-        flag = "Toggle_1",
+        flag = "Ragebot_Toggle",
         callback = function(v)
             return
         end
@@ -863,11 +579,11 @@ local CreateMenu = function()
 
     Ragebot.Bind = Ragebot.Toggle:AddBind({
         enabled = true,
-        text = "ragebot",
+        text = "Rage Key",
         tooltip = "Toggle on key press",
         mode = "toggle",
         bind = "None",
-        flag = "ToggleKey_1",
+        flag = "Ragebot_BindKey",
         state = false,
         risky = false,
         noindicator = false,
@@ -881,8 +597,8 @@ local CreateMenu = function()
 
     Ragebot.Bindmode = Ragebot.Section:AddList({
         enabled = true,
-        text = "Bind Mode", 
-        tooltip = "Select a bind mode",
+        text = "Bind Mode",
+        tooltip = "Select a bind mode (Toggle/Hold)",
         selected = "Toggle",
         multi = false,
         open = false,
@@ -899,36 +615,96 @@ local CreateMenu = function()
         text = "Auto Fire",
         state = false,
         tooltip = "Toggle ragebot auto firing (auto shoot)",
-        flag = "Toggle_1",
+        flag = "Ragebot_AutoFire",
         callback = function(v)
             return
         end
     })
 
+    Ragebot.AutoFireBind = Ragebot.AutoFire:AddBind({
+        enabled = true,
+        text = "Auto Fire Key",
+        tooltip = "Only auto fire when key is held",
+        mode = "hold",
+        bind = "None",
+        flag = "Ragebot_AutoFireBindKey",
+        state = false,
+        risky = false,
+        noindicator = true,
+        callback = function(v)
+            return
+        end,
+        keycallback = function(v)
+            return
+        end
+    })
+
+    Ragebot.AutoFireBindmode = Ragebot.Section:AddList({
+        enabled = true,
+        text = "Bind Mode",
+        tooltip = "Select a bind mode (Toggle/Hold)",
+        selected = "Toggle",
+        multi = false,
+        open = false,
+        values = {"None", "Toggle", "Hold"},
+        risky = false,
+        callback = function(v)
+            Ragebot.AutoFireBindmode:SetMode(v:lower())
+        end
+    })
+
+    if Metadata.game ~= "Da Hood" then
+        Ragebot.AutoWall = Ragebot.Section:AddToggle({
+            text = "Auto Wall",
+            state = false,
+            tooltip = "Allows aiming and shooting through materials/walls",
+            flag = "Ragebot_AutoWall_Toggle",
+            risky = true,
+            callback = function(v)
+                return
+            end
+        })
+
+        Ragebot.AutoWallMinDamage = Ragebot.AutoWall:AddSlider({
+            enabled = true,
+            text = "Min Wall Damage",
+            tooltip = "Minimum required damage through a wall to shoot",
+            flag = "Ragebot_AutoWallMinDamage",
+            dragging = true,
+            focused = false,
+            min = 1,
+            max = 100,
+            increment = 1,
+            risky = true,
+            callback = function(v)
+                return
+            end
+        })
+    end
+
     Ragebot.AimbotMode = Ragebot.Section:AddList({
         enabled = true,
-        text = "Aimbot Mode", 
-        tooltip = "Select an aimbot mode",
-        selected = "Camera",
+        text = "Mode",
+        tooltip = "Select an aimbot mode (Camera/Silent)",
+        selected = "Silent",
         multi = false,
         open = false,
         values = {"Camera", "Silent"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     Ragebot.FOV = Ragebot.Section:AddSlider({
         enabled = true,
         text = "FOV",
-        tooltip = "Adjust aimbot field of view",
-        flag = "Slider_1",
+        tooltip = "Adjust aimbot field of view (Silent Aim ignores this)",
+        flag = "Ragebot_FOV",
         suffix = "°",
         dragging = true,
         focused = false,
         min = 1,
-        max = 180,
+        max = 360, -- Maxed for Rage
         increment = 1,
         risky = false,
         callback = function(v)
@@ -936,63 +712,87 @@ local CreateMenu = function()
         end
     })
 
+    Ragebot.Prediction = Ragebot.Section:AddSlider({
+        enabled = true,
+        text = "Prediction",
+        tooltip = "Compensate for target movement/ping",
+        flag = "Ragebot_Prediction",
+        dragging = true,
+        focused = false,
+        min = 0,
+        max = 1,
+        increment = 0.01,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["Ragebot"] = Ragebot
+
+    -- Ragebot Targeting (Column 1)
     local RagebotTargeting = {
         Section = RageTab:AddSection("Targeting", 1)
     }
 
     RagebotTargeting.Hitboxes = RagebotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot Hitboxes", 
-        tooltip = "Configure aimbot hitboxes",
+        text = "Enabled Hitboxes",
+        tooltip = "Hitboxes the ragebot can target",
         multi = true,
         open = false,
-        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs",
+                  "Feet"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     RagebotTargeting.PreferredHitboxes = RagebotTargeting.Section:AddList({
         enabled = true,
-        text = "Hitbox Priority", 
-        tooltip = "Configure preferred aimbot hitboxes",
+        text = "Hitbox Priority",
+        tooltip = "Order of preferred hitboxes to target",
         multi = true,
         open = false,
-        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs", "Feet"},
+        values = {"Head", "Upper Torso", "Lower Torso", "Upper Arms", "Lower Arms", "Hands", "Upper Legs", "Lower Legs",
+                  "Feet"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     RagebotTargeting.Priority = RagebotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot Priority", 
-        tooltip = "Choose target selection",
+        text = "Target Priority",
+        tooltip = "Choose target selection (Closest, Crosshair, etc.)",
         selected = "Closest",
         multi = false,
         open = false,
-        values = {"Closest", "Crosshair", "Least HP", "Most HP"},
+        values = {"Closest", "Furthest", "Crosshair", "Least HP", "Most HP"},
         risky = false,
         callback = function(v)
-
         end
     })
 
     RagebotTargeting.Conditions = RagebotTargeting.Section:AddList({
         enabled = true,
-        text = "Aimbot Conditions", 
-        tooltip = "Configure aimbot conditions",
+        text = "Conditions",
+        tooltip = "Conditions a target must meet to be aimed at",
         multi = true,
         open = false,
-        values = {"Target Alive", "Immunity Check", "Visibility Check"},
+        values = {"Target Alive", "Immunity Check", "Visibility Check", "Team Check"},
         risky = false,
         callback = function(v)
-
         end
     })
 
+    Menu["RagebotTargeting"] = RagebotTargeting
+
+    ---
+    --- RAGE TAB (Column 2)
+    ---
+
+    -- Anti-Aim Section (Rage Tab - Column 2)
     local RagebotAntiAim = {
         Section = RageTab:AddSection("Anti-Aim", 2)
     }
@@ -1000,8 +800,9 @@ local CreateMenu = function()
     RagebotAntiAim.Toggle = RagebotAntiAim.Section:AddToggle({
         text = "Toggle",
         state = false,
-        tooltip = "Toggle ragebot anti-aim",
-        flag = "Toggle_1",
+        tooltip = "Toggle ragebot anti-aim (for third-person/server view)",
+        flag = "RageAA_Toggle",
+        risky = true,
         callback = function(v)
             return
         end
@@ -1009,42 +810,57 @@ local CreateMenu = function()
 
     RagebotAntiAim.Pitch = RagebotAntiAim.Section:AddList({
         enabled = true,
-        text = "Pitch Mode", 
-        tooltip = "Configure anti-aim pitch",
+        text = "Pitch Mode",
+        tooltip = "Configure anti-aim pitch (up/down rotation)",
         multi = false,
         open = false,
-        values = {"None", "Up", "Down", "Random"},
-        risky = false,
+        values = {"None", "Up", "Down", "Fake Down", "Random"},
+        risky = true,
         callback = function(v)
-
         end
     })
 
     RagebotAntiAim.Yaw = RagebotAntiAim.Section:AddList({
         enabled = true,
-        text = "Yaw Mode", 
-        tooltip = "Configure anti-aim yaw",
+        text = "Yaw Mode",
+        tooltip = "Configure anti-aim yaw (horizontal rotation)",
         multi = false,
         open = false,
-        values = {"None", "Spin", "Jitter", "Random"},
-        risky = false,
+        values = {"None", "Spin", "Jitter", "Random", "Backwards", "Static"},
+        risky = true,
         callback = function(v)
-
         end
     })
 
     RagebotAntiAim.Desync = RagebotAntiAim.Section:AddList({
         enabled = true,
-        text = "Desync Mode", 
-        tooltip = "Configure anti-aim desync",
+        text = "Desync Mode",
+        tooltip = "Configure anti-aim desync (hides real hitbox location)",
         multi = false,
         open = false,
-        values = {"None", "Null", "Beneath", "Break", "Random"},
-        risky = false,
+        values = {"None", "Break", "Roll", "Beneath"},
+        risky = true,
         callback = function(v)
-
         end
     })
+
+    RagebotAntiAim.DesyncAmount = RagebotAntiAim.Section:AddSlider({
+        enabled = true,
+        text = "Desync Yaw Amount",
+        tooltip = "Maximum angle offset for desyncing yaw",
+        flag = "RageAA_DesyncAmount",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 180,
+        increment = 5,
+        risky = true,
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["RagebotAntiAim"] = RagebotAntiAim
 
     local RagebotExploits = {
         Section = RageTab:AddSection("Exploits", 2)
@@ -1053,8 +869,9 @@ local CreateMenu = function()
     RagebotExploits.ExtendedHitboxes = RagebotExploits.Section:AddToggle({
         text = "Extended Hitboxes",
         state = false,
-        tooltip = "Extend enemy hitboxes",
-        flag = "Toggle_1",
+        tooltip = "Extend enemy hitboxes for easier targeting",
+        flag = "RageExploits_ExtendedHitboxes",
+        risky = true,
         callback = function(v)
             return
         end
@@ -1062,15 +879,15 @@ local CreateMenu = function()
 
     RagebotExploits.HitboxSize = RagebotExploits.ExtendedHitboxes:AddSlider({
         enabled = true,
-        text = "Hitbox Size",
-        tooltip = "Adjust enemy hitbox sizes",
-        flag = "Slider_1",
+        text = "Multiplier",
+        tooltip = "Adjust enemy hitbox size multiplier",
+        flag = "RageExploits_HitboxSize",
         dragging = true,
         focused = false,
         min = 1,
-        max = 100,
-        increment = 1,
-        risky = false,
+        max = 10,
+        increment = 0.5,
+        risky = true,
         callback = function(v)
             return
         end
@@ -1079,8 +896,9 @@ local CreateMenu = function()
     RagebotExploits.RapidFire = RagebotExploits.Section:AddToggle({
         text = "Rapid Fire",
         state = false,
-        tooltip = "Increases fire rate",
-        flag = "Toggle_1",
+        tooltip = "Increases fire rate beyond normal limits",
+        flag = "RageExploits_RapidFire",
+        risky = true,
         callback = function(v)
             return
         end
@@ -1088,32 +906,37 @@ local CreateMenu = function()
 
     RagebotExploits.FireRate = RagebotExploits.RapidFire:AddSlider({
         enabled = true,
-        text = "Fire Rate",
-        tooltip = "Adjust fire rate",
-        flag = "Slider_1",
+        text = "Rate Multiplier",
+        tooltip = "Adjust fire rate multiplier",
+        flag = "RageExploits_FireRate",
         dragging = true,
         focused = false,
         min = 1,
-        max = 6,
+        max = 10,
         increment = 1,
-        risky = false,
+        risky = true,
         callback = function(v)
             return
         end
     })
 
-    RagebotExploits.Reloadind = RagebotExploits.Section:AddList({
+    RagebotExploits.Reloading = RagebotExploits.Section:AddList({
         enabled = true,
-        text = "Reload", 
-        tooltip = "Configure weapon reload exploits",
+        text = "Reload",
+        tooltip = "Configure weapon reload exploits (Instant, Spam, etc.)",
         multi = true,
         open = false,
-        values = {"Auto Reload", "Spam Reload", "Rifle Reload"},
-        risky = false,
+        values = {"Instant Reload", "Auto Reload", "Infinite Ammo", "Ghost Ammo"},
+        risky = true,
         callback = function(v)
-
         end
     })
+
+    Menu["RagebotExploits"] = RagebotExploits
+
+    ---
+    --- VISUALS TAB (Column 1 & 2)
+    ---
 
     local VisualsESP = {
         Section = VisualsTab:AddSection("ESP", 1)
@@ -1122,8 +945,8 @@ local CreateMenu = function()
     VisualsESP.Toggle = VisualsESP.Section:AddToggle({
         text = "Toggle",
         state = false,
-        tooltip = "Toggle visual features",
-        flag = "Toggle_1",
+        tooltip = "Toggle all ESP features",
+        flag = "VisualsESP_Toggle",
         callback = function(v)
             return
         end
@@ -1132,18 +955,509 @@ local CreateMenu = function()
     VisualsESP.MaxDistance = VisualsESP.Toggle:AddSlider({
         enabled = true,
         text = "Max Distance",
-        tooltip = "Adjust ESP max view distance",
-        flag = "Slider_1",
+        tooltip = "Adjust ESP max view distance in studs",
+        flag = "VisualsESP_MaxDistance",
         dragging = true,
         focused = false,
         min = 1,
         max = 10000,
+        increment = 10,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.Section:AddSeparator({})
+
+    VisualsESP.Box = VisualsESP.Section:AddToggle({
+        text = "Box",
+        state = false,
+        tooltip = "Draw a 2D or 3D box around targets",
+        flag = "VisualsESP_Box",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.BoxType = VisualsESP.Box:AddList({
+        enabled = true,
+        text = "Box Type",
+        tooltip = "Select Box Style",
+        selected = "2D",
+        multi = false,
+        open = false,
+        values = {"2D", "Corner", "3D", "Bounding"},
+        risky = false,
+        callback = function(v)
+        end
+    })
+
+    VisualsESP.BoxFill = VisualsESP.Box:AddColor({
+        enabled = true,
+        text = "Box Fill Color",
+        tooltip = "Inner fill color for the box (0% opacity for outline only)",
+        color = Color3.fromRGB(20, 20, 20),
+        flag = "VisualsESP_BoxFillColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    VisualsESP.Outline = VisualsESP.Section:AddToggle({
+        text = "Outline/Stroke",
+        state = false,
+        tooltip = "Draw an outline/stroke around the box",
+        flag = "VisualsESP_BoxOutline",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.Tracers = VisualsESP.Section:AddToggle({
+        text = "Tracers",
+        state = false,
+        tooltip = "Draw lines from screen center/bottom to targets",
+        flag = "VisualsESP_Tracers",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.Name = VisualsESP.Section:AddToggle({
+        text = "Name",
+        state = false,
+        tooltip = "Display target player name",
+        flag = "VisualsESP_Name",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.NameSize = VisualsESP.Name:AddSlider({
+        enabled = true,
+        text = "Font Size",
+        tooltip = "Adjust the size of the displayed name text",
+        flag = "VisualsESP_NameSize",
+        dragging = true,
+        focused = false,
+        min = 8,
+        max = 24,
         increment = 1,
         risky = false,
         callback = function(v)
             return
         end
     })
+
+    VisualsESP.Health = VisualsESP.Section:AddToggle({
+        text = "Health",
+        state = false,
+        tooltip = "Display target player health bar/text",
+        flag = "VisualsESP_Health",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.Distance = VisualsESP.Section:AddToggle({
+        text = "Distance",
+        state = false,
+        tooltip = "Display distance to target",
+        flag = "VisualsESP_Distance",
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["VisualsESP"] = VisualsESP
+
+    -- Visuals Chams/Models (Column 2)
+    local VisualsChams = {
+        Section = VisualsTab:AddSection("Chams & Models", 2)
+    }
+
+    VisualsChams.Chams = VisualsChams.Section:AddToggle({
+        text = "Chams",
+        state = false,
+        tooltip = "Change material/color of models (e.g., targets, weapons)",
+        flag = "VisualsChams_Toggle",
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsChams.ChamsType = VisualsChams.Chams:AddList({
+        enabled = true,
+        text = "Chams Type",
+        tooltip = "Select Chams Style",
+        selected = "Flat",
+        multi = false,
+        open = false,
+        values = {"Flat", "Pulse", "Glow", "Wireframe", "Shine"},
+        risky = false,
+        callback = function(v)
+        end
+    })
+
+    VisualsChams.TargetColor = VisualsChams.Chams:AddColor({
+        enabled = true,
+        text = "Target Color (Enemy)",
+        tooltip = "Color of enemy models",
+        color = Color3.fromRGB(255, 0, 0),
+        flag = "VisualsChams_EnemyColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    VisualsChams.TeamColor = VisualsChams.Chams:AddColor({
+        enabled = true,
+        text = "Team Color (Friendly)",
+        tooltip = "Color of friendly models",
+        color = Color3.fromRGB(0, 255, 0),
+        flag = "VisualsChams_TeamColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    VisualsChams.Transparency = VisualsChams.Chams:AddSlider({
+        enabled = true,
+        text = "Transparency",
+        tooltip = "Adjust the transparency of the chams material",
+        flag = "VisualsChams_Transparency",
+        dragging = true,
+        focused = false,
+        min = 0,
+        max = 1,
+        increment = 0.05,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsChams.ThroughWalls = VisualsChams.Section:AddToggle({
+        text = "Through Walls",
+        state = false,
+        tooltip = "Render target models through objects (requires Chams)",
+        flag = "VisualsChams_ThroughWalls",
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsChams.Weapon = VisualsChams.Section:AddToggle({
+        text = "Weapon ESP",
+        state = false,
+        tooltip = "Display enemy current weapon name",
+        flag = "VisualsChams_Weapon",
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["VisualsChams"] = VisualsChams
+
+    -- Visuals Effects (Column 2)
+    local VisualsEffects = {
+        Section = VisualsTab:AddSection("Effects", 2)
+    }
+
+    VisualsEffects.Ambient = VisualsEffects.Section:AddToggle({
+        text = "Full Bright",
+        state = false,
+        tooltip = "Increases the environment brightness",
+        flag = "VisualsEffects_FullBright",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsEffects.NoSky = VisualsEffects.Section:AddToggle({
+        text = "No Sky",
+        state = false,
+        tooltip = "Removes the skybox for clarity/visibility",
+        flag = "VisualsEffects_NoSky",
+        callback = function(v)
+            return
+        end
+    })
+
+    VisualsEffects.NoPost = VisualsEffects.Section:AddToggle({
+        text = "Remove Post Processing",
+        state = false,
+        tooltip = "Removes blurring, color correction, and screen effects",
+        flag = "VisualsEffects_NoPost",
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["VisualsEffects"] = VisualsEffects
+
+    ---
+    --- WORLD TAB (Column 1)
+    ---
+
+    local WorldExploits = {
+        Section = WorldTab:AddSection("Exploits", 1)
+    }
+
+    WorldExploits.Walkspeed = WorldExploits.Section:AddSlider({
+        enabled = true,
+        text = "Walk Speed",
+        tooltip = "Adjust your character's walk speed",
+        flag = "WorldExploits_Walkspeed",
+        dragging = true,
+        focused = false,
+        min = 16,
+        max = 100,
+        increment = 1,
+        risky = true,
+        callback = function(v)
+            return
+        end
+    })
+
+    WorldExploits.Jumppower = WorldExploits.Section:AddSlider({
+        enabled = true,
+        text = "Jump Power",
+        tooltip = "Adjust your character's jump power",
+        flag = "WorldExploits_JumpPower",
+        dragging = true,
+        focused = false,
+        min = 50,
+        max = 500,
+        increment = 10,
+        risky = true,
+        callback = function(v)
+            return
+        end
+    })
+
+    WorldExploits.Gravity = WorldExploits.Section:AddSlider({
+        enabled = true,
+        text = "Gravity Multiplier",
+        tooltip = "Adjust the world gravity level (0 for fly, 1 for normal)",
+        flag = "WorldExploits_Gravity",
+        dragging = true,
+        focused = false,
+        min = 0,
+        max = 2,
+        increment = 0.05,
+        risky = true,
+        callback = function(v)
+            return
+        end
+    })
+
+    WorldExploits.Noclip = WorldExploits.Section:AddToggle({
+        text = "No Clip",
+        state = false,
+        tooltip = "Allows you to pass through walls and objects",
+        flag = "WorldExploits_NoClip",
+        risky = true,
+        callback = function(v)
+            return
+        end
+    })
+
+    WorldExploits.AntiAfk = WorldExploits.Section:AddToggle({
+        text = "Anti AFK",
+        state = false,
+        tooltip = "Prevents you from being kicked for inactivity",
+        flag = "WorldExploits_AntiAFK",
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["WorldExploits"] = WorldExploits
+
+    local WorldVisuals = {
+        Section = WorldTab:AddSection("Visuals", 1)
+    }
+
+    WorldVisuals.TimeOfDayToggle = WorldVisuals.Section:AddToggle({
+        text = "Time of Day",
+        state = false,
+        tooltip = "Override the time of day in the game",
+        flag = "WorldVisuals_TimeToggle",
+        risky = false,
+        callback = function(v)
+            if not v then
+                Services.Lighting.ClockTime = 12
+            end
+        end
+    })
+
+    WorldVisuals.TimeOfDaySlider = WorldVisuals.TimeOfDayToggle:AddSlider({
+        enabled = true,
+        text = "Clock Time",
+        tooltip = "Set the in-game time (e.g., 0 for midnight, 12 for noon)",
+        flag = "WorldVisuals_TimeOfDay",
+        dragging = true,
+        focused = false,
+        min = 0,
+        max = 24,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            if WorldVisuals.TimeOfDayToggle.state then
+                Services.Lighting.ClockTime = v
+            end
+        end
+    })
+
+    WorldVisuals.Fog = WorldVisuals.Section:AddSlider({
+        enabled = true,
+        text = "Fog End",
+        tooltip = "Adjust the distance at which fog ends",
+        flag = "WorldVisuals_FogEnd",
+        dragging = true,
+        focused = false,
+        min = 100,
+        max = 100000,
+        value = Services.Lighting.FogEnd or 100000,
+        increment = 100,
+        risky = false,
+        callback = function(v)
+            Services.Lighting.FogEnd = v
+        end
+    })
+
+    WorldVisuals.CameraFOV = WorldVisuals.Section:AddSlider({
+        enabled = true,
+        text = "Camera FOV",
+        tooltip = "Adjust your personal camera field of view",
+        flag = "WorldVisuals_CameraFOV",
+        suffix = "°",
+        dragging = true,
+        focused = false,
+        min = 1,
+        max = 120,
+        value = game.Workspace.CurrentCamera.FieldOfView or 70,
+        increment = 1,
+        risky = false,
+        callback = function(v)
+            if game.Workspace.CurrentCamera then
+                game.Workspace.CurrentCamera.FieldOfView = v
+            end
+        end
+    })
+
+    Menu["WorldVisuals"] = WorldVisuals
+
+    ---
+    --- OTHER TAB (Column 1)
+    ---
+
+    local OtherUtility = {
+        Section = OtherTab:AddSection("Utility", 1)
+    }
+
+    OtherUtility.LocalPlayerTP = OtherUtility.Section:AddToggle({
+        text = "Local Player Teleport",
+        state = false,
+        tooltip = "Teleport to nearest player when key is pressed",
+        flag = "OtherUtility_LPTP",
+        risky = true,
+        callback = function(v)
+            return
+        end
+    })
+
+    OtherUtility.ServerHop = OtherUtility.Section:AddToggle({
+        text = "Server Hop",
+        state = false,
+        tooltip = "Automatically teleport to a new server",
+        flag = "OtherUtility_ServerHop",
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["OtherUtility"] = OtherUtility
+
+    local OtherChat = {
+        Section = OtherTab:AddSection("Chat", 1)
+    }
+
+    OtherChat.Spammer = OtherChat.Section:AddToggle({
+        text = "Chat Spammer",
+        state = false,
+        tooltip = "Toggle spamming a message in chat",
+        flag = "OtherChat_SpammerToggle",
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    OtherChat.Text = OtherChat.Section:AddBox({
+        enabled = true,
+        text = "Spam Message",
+        flag = "OtherChat_SpamMessage",
+        callback = function(v)
+            return
+        end
+    })
+
+    OtherChat.Delay = OtherChat.Spammer:AddSlider({
+        enabled = true,
+        text = "Spam Delay",
+        tooltip = "Time (in seconds) between each message",
+        flag = "OtherChat_SpamDelay",
+        dragging = true,
+        focused = false,
+        min = 0.5,
+        max = 10,
+        increment = 0.1,
+        risky = false,
+        callback = function(v)
+            return
+        end
+    })
+
+    Menu["OtherChat"] = OtherChat
+
+    local OtherTrolling = {
+        Section = OtherTab:AddSection("Trolling", 1)
+    }
+
+    OtherTrolling.KickPlayer = OtherTrolling.Section:AddButton({
+        text = "Kick Nearest Player",
+        tooltip = "Attempt to kick the nearest player (Exploit)",
+        flag = "OtherTrolling_KickNearest",
+        risky = true,
+        callback = function()
+            -- Logic to attempt a kick
+        end
+    })
+
+    OtherTrolling.CrashServer = OtherTrolling.Section:AddButton({
+        text = "Crash Server",
+        tooltip = "Attempt to crash the entire server (Extremely Risky Exploit)",
+        flag = "OtherTrolling_CrashServer",
+        risky = true,
+        callback = function()
+            -- Logic to attempt a server crash
+        end
+    })
+
+    Menu["OtherTrolling"] = OtherTrolling
 end
 
 local Hooks = HookRegistry()
@@ -1152,8 +1466,8 @@ OnLoad()
 CreateMenu()
 
 Hooks:Register("onInit", function()
-    local Time = (string.format("%."..tostring(4).."f", os.clock() - Clock))
-    UI:SendNotification(("Loaded In "..tostring(Time)), 6)
+    local Time = (string.format("%." .. tostring(4) .. "f", os.clock() - Clock))
+    UI:SendNotification(("Loaded In " .. tostring(Time)), 6)
 end)
 
 Hooks:Register("onRenderStepped", function()
