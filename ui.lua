@@ -4119,7 +4119,9 @@ function library:init()
                         if typeof(str) == 'string' then
                             self.text = str;
                             self.objects.text.Text = str;
-                            self.indicatorValue:SetKey(str);
+                            if not self.noindicator then
+                                self.indicatorValue:SetKey(str);
+                            end
                         end
                     end
 
@@ -4135,11 +4137,14 @@ function library:init()
                         self.bind = (keybind and keybind) or keybind or self.bind
                         if self.bind == Enum.KeyCode.Backspace then
                             self.bind = 'none';
+                            keyName = 'NONE'
+                        elseif typeof(self.bind) == 'string' then
+                            keyName = self.bind
                         else
-                            keyName = keyNames[keybind] or keybind.Name or keybind
+                            keyName = keyNames[keybind] or (keybind and keybind.Name) or 'NONE'
                         end
                         self.keycallback(self.bind);
-                        self:SetKeyText(keyName:upper());
+                        self:SetKeyText(tostring(keyName):upper());
                         
                         -- Only update indicator if not disabled
                         if not self.noindicator then
@@ -4148,7 +4153,7 @@ function library:init()
                             
                             -- Update indicator with key and mode
                             local modeLabel = self.mode == 'hold' and '[H]' or '[T]'
-                            self.indicatorValue:SetValue('[' .. keyName:upper() .. '] ' .. modeLabel);
+                            self.indicatorValue:SetValue('[' .. tostring(keyName):upper() .. '] ' .. modeLabel);
                         end
                         self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                     end
