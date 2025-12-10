@@ -556,7 +556,7 @@ function library:init()
                     elseif option.class == 'slider' then
                         option:SetValue(value == nil and 0 or value)
                     elseif option.class == 'bind' then
-                        option:SetBind(value == nil and 'none' or
+                        option:SetBind(value == nil and 'None' or
                                            (utility:HasProperty(Enum.KeyCode, value) and Enum.KeyCode[value] or
                                                Enum.UserInputType[value]));
                     elseif option.class == 'color' then
@@ -1769,7 +1769,7 @@ function library:init()
 
                                         if currentList.multi then
                                             for i, v in next, currentSelected do
-                                                if v ~= "none" then
+                                                if v ~= "None" then
                                                     newSelected[i] = v;
                                                 end
                                             end
