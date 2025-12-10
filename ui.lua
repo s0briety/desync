@@ -2486,6 +2486,7 @@ function library:init()
                                 bind.indicatorValue:SetEnabled(display and not bind.noindicator);
                             end
                             self.keycallback(self.bind);
+                            self.SetMode(self.bind.mode);
                             self:SetKeyText(keyName:upper());
                             self.indicatorValue:SetKey((self.text == nil or self.text == '') and
                                                            (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
@@ -2496,9 +2497,9 @@ function library:init()
                             self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                         end
 
-                        function bind:SetKeyText(str)
+                        function bind:SetKeyText(str, mode)
                             str = tostring(str);
-                            self.objects.keyText.Text = '[' .. str .. ']';
+                            self.objects.keyText.Text = '[' .. str .. ']' .. ' - ';
                             self.objects.keyText.Position = newUDim2(0, 2, 0, 2);
                             self.objects.holder.Size = newUDim2(0, self.objects.keyText.TextBounds.X + 2, 0, 17)
                             toggle:UpdateOptions();
@@ -2568,6 +2569,15 @@ function library:init()
 
                         tooltip(bind);
                         bind:SetBind(bind.bind);
+
+                        function bind:SetMode(mode)
+                            if mode == 'toggle' or mode == 'hold' then
+                                self.mode = mode
+                                local modeText = mode == 'hold' and '(HOLD)' or '(TOGGLE)'
+                                self.objects.modeText.Text = modeText
+                            end
+                        end
+                        
                         self:UpdateOptions();
                         return bind
                     end
@@ -3059,7 +3069,7 @@ function library:init()
                             Parent = objs.holder
                         })
 
-                        objs.plusDetector = utility:Draw('Square', {
+                        objs.minusDetector = utility:Draw('Square', {
                             Size = newUDim2(0, 14, 0, 14),
                             Position = newUDim2(1, -28, 0, 1),
                             Transparency = 0,
@@ -3067,7 +3077,7 @@ function library:init()
                             Parent = objs.holder
                         })
 
-                        objs.minusDetector = utility:Draw('Square', {
+                        objs.plusDetector = utility:Draw('Square', {
                             Size = newUDim2(0, 14, 0, 14),
                             Position = newUDim2(1, -14, 0, 1),
                             Transparency = 0,
@@ -3079,7 +3089,7 @@ function library:init()
                             Position = newUDim2(.5, 0, 0, -1),
                             ThemeColor = 'Option Text 3',
                             Text = '+',
-                            Size = 13,
+                            Size = 15,
                             Font = 2,
                             ZIndex = z + 4,
                             Center = true,
@@ -3091,7 +3101,7 @@ function library:init()
                             Position = newUDim2(.5, 0, 0, -1),
                             ThemeColor = 'Option Text 3',
                             Text = '-',
-                            Size = 13,
+                            Size = 15,
                             Font = 2,
                             ZIndex = z + 4,
                             Center = true,
@@ -4100,10 +4110,6 @@ function library:init()
                             end
                         end)
 
-                        utility:Connection(objs.holder.MouseButton2Down, function()
-                            bind:ShowModeMenu()
-                        end)
-
                     end
                     ----------------------
 
@@ -4133,10 +4139,11 @@ function library:init()
                             keyName = keyNames[keybind] or keybind.Name or keybind
                         end
                         self.keycallback(self.bind);
+                        self.SetMode(self.bind.mode);
                         self:SetKeyText(keyName:upper());
                         self.indicatorValue:SetKey((self.text == nil or self.text == '') and
                                                        (self.flag == nil and 'unknown' or self.flag) or self.text); -- this is so dumb
-                        self.indicatorValue:SetValue('[' .. keyName:upper() .. ']');
+                        self.indicatorValue:SetValue('[' .. str .. ']' .. ' - ' .. self.objects.modeText.Text);
                         self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                     end
 
@@ -4197,41 +4204,11 @@ function library:init()
                     bind:SetBind(bind.bind);
                     bind:SetText(bind.text);
                     
-                    function bind:ShowModeMenu()
-                        local modeOptions = {'toggle', 'hold'}
-                        local window_dropdown = section.objects.window_dropdown
-                        
-                        window_dropdown.objects.values = {}
-                        window_dropdown.selectedValue = nil
-                        window_dropdown.option = bind
-                        
-                        for i, mode in ipairs(modeOptions) do
-                            local valueObj = {
-                                text = mode,
-                                order = i,
-                                selected = (bind.mode == mode)
-                            }
-                            table.insert(window_dropdown.objects.values, valueObj)
-                        end
-                        
-                        window_dropdown:Refresh()
-                        
-                        local dropPos = bind.objects.holder.AbsolutePosition
-                        window_dropdown.objects.background.Position = newUDim2(0, dropPos.X, 0, dropPos.Y + 20)
-                        window_dropdown.objects.background.Visible = true
-                        
-                        local selectedConnection
-                        selectedConnection = utility:Connection(window_dropdown.selected, function(value)
-                            bind:SetMode(value)
-                            window_dropdown.objects.background.Visible = false
-                            selectedConnection:Disconnect()
-                        end)
-                    end
-                    
                     function bind:SetMode(mode)
                         if mode == 'toggle' or mode == 'hold' then
                             self.mode = mode
-                            -- Update visual indicator if needed
+                            local modeText = mode == 'hold' and '(HOLD)' or '(TOGGLE)'
+                            self.objects.modeText.Text = modeText
                         end
                     end
                     

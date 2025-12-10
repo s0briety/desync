@@ -383,6 +383,7 @@ local CreateMenu = function()
         risky = false,
         callback = function(v)
             LegitMain.Bind.mode = v.lower()
+            print(LegitMain.Bind.mode)
         end
     })
 
