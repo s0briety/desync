@@ -2523,6 +2523,7 @@ function library:init()
                                 end
                                 bind.indicatorValue:SetEnabled(display and not bind.noindicator)
                             elseif (inp.KeyCode == bind.bind or inp.UserInputType == bind.bind) and not bind.binding then
+                                print(bind.mode)
                                 if bind.mode == 'toggle' then
                                     bind.state = not bind.state
                                     if bind.flag then
@@ -4167,6 +4168,7 @@ function library:init()
                             bind.state = true
                             library.flags[bind.flag] = bind.state
                         elseif (inp.KeyCode == bind.bind or inp.UserInputType == bind.bind) and not bind.binding then
+                            print(bind.mode)
                             if bind.mode == 'toggle' then
                                 bind.state = not bind.state
                                 if bind.flag then
