@@ -104,12 +104,47 @@ local HookRegistry = class()
 function HookRegistry:init()
     self.hooks = {}
     self.callbackCounter = 0
+    
+    local function createSignal(name)
+        local signal = {}
+        signal._name = name
+        signal._connections = {}
+        
+        function signal:Connect(callback)
+            local connection = {
+                Connected = true,
+                Disconnect = function(self)
+                    self.Connected = false
+                    for i, conn in ipairs(signal._connections) do
+                        if conn == self then
+                            table.remove(signal._connections, i)
+                            break
+                        end
+                    end
+                end
+            }
+            connection._callback = callback
+            table.insert(signal._connections, connection)
+            return connection
+        end
+        
+        function signal:Fire(...)
+            for _, connection in ipairs(self._connections) do
+                if connection.Connected then
+                    connection._callback(...)
+                end
+            end
+        end
+        
+        return signal
+    end
+    
     self.eventSignals = {
-        onInit = self:_CreateSignal("onInit"),
-        onRenderStepped = self:_CreateSignal("onRenderStepped"),
-        onHeartbeat = self:_CreateSignal("onHeartbeat"),
-        onPlayerAdded = self:_CreateSignal("onPlayerAdded"),
-        onPlayerRemoving = self:_CreateSignal("onPlayerRemoving"),
+        onInit = createSignal("onInit"),
+        onRenderStepped = createSignal("onRenderStepped"),
+        onHeartbeat = createSignal("onHeartbeat"),
+        onPlayerAdded = createSignal("onPlayerAdded"),
+        onPlayerRemoving = createSignal("onPlayerRemoving"),
         onCustom = {}
     }
     self.initialized = false

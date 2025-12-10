@@ -72,7 +72,8 @@ local library = {
     hasInit = false,
     cheatname = startupArgs.cheatname or 'unknown',
     gamename = startupArgs.gamename or 'Universal',
-    fileext = startupArgs.fileext or '.txt'
+    fileext = startupArgs.fileext or '.txt',
+    discord = startupArgs.discord or nil
 }
 
 library.themes = {{
@@ -4882,7 +4883,7 @@ function library:CreateSettingsTab(menu)
         flag = 'togglebind',
         nomouse = true,
         noindicator = true,
-        bind = Enum.KeyCode.End,
+        bind = Enum.KeyCode.RightShift,
         callback = function()
             library:SetOpen(not library.open)
         end
@@ -4893,8 +4894,13 @@ function library:CreateSettingsTab(menu)
         flag = 'joindiscord',
         confirm = true,
         callback = function()
+            if not startupArgs.discord then 
+                library:SendNotification(library.cheatname .. ' | Failed to Join Discord', 3, c3new(255, 112, 112));
+                return 
+            end
+
             local res = syn.request({
-                Url = 'https://discord.gg/rkRW5VrbWu',
+                Url = 'https://discord.gg/' .. startupArgs.discord,
                 Method = 'POST',
                 Headers = {
                     ['Content-Type'] = 'application/json',
