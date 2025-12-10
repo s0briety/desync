@@ -66,6 +66,7 @@ local library = {
         ['Eight'] = 8,
         ['Nine'] = 9
     },
+    signal = loadstring(game:HttpGet('https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/signal.lua'))();
     open = false,
     opening = false,
     hasInit = false,
@@ -73,91 +74,6 @@ local library = {
     gamename = startupArgs.gamename or 'Universal',
     fileext = startupArgs.fileext or '.txt'
 }
-
-local ENABLE_TRACEBACK = false
-local _Signal = {}
-
-_Signal.__index = Signal
-_Signal.ClassName = "Signal"
-
-function _Signal.isSignal(value)
-	return type(value) == "table"
-		and getmetatable(value) == Signal
-end
-
-function _Signal.new()
-	local self = setmetatable({}, Signal)
-	self._bindableEvent = Instance.new("BindableEvent")
-	self._argMap = {}
-	self._source = ENABLE_TRACEBACK and debug.traceback() or ""
-	self._bindableEvent.Event:Connect(function(key)
-		self._argMap[key] = nil
-		if (not self._bindableEvent) and (not next(self._argMap)) then
-			self._argMap = nil
-		end
-	end)
-	return self
-end
-
-function _Signal:Fire(...)
-	if not self._bindableEvent then
-		warn(("Signal is already destroyed. %s"):format(self._source))
-		return
-	end
-	local args = table.pack(...)
-	local key = http:GenerateGUID(false)
-	self._argMap[key] = args
-	self._bindableEvent:Fire(key)
-end
-
-function _Signal:Connect(handler)
-	if not (type(handler) == "function") then
-		error(("connect(%s)"):format(typeof(handler)), 2)
-	end
-	return self._bindableEvent.Event:Connect(function(key)
-		local args = self._argMap[key]
-		if args then
-			handler(table.unpack(args, 1, args.n))
-		else
-			error("Missing arg data, probably due to reentrance.")
-		end
-	end)
-end
-
-function _Signal:Once(handler)
-	if not (type(handler) == "function") then
-		error(("once(%s)"):format(typeof(handler)), 2)
-	end
-	return self._bindableEvent.Event:Once(function(key)
-		local args = self._argMap[key]
-		if args then
-			handler(table.unpack(args, 1, args.n))
-		else
-			error("Missing arg data, probably due to reentrance.")
-		end
-	end)
-end
-
-function _Signal:Wait()
-	local key = self._bindableEvent.Event:Wait()
-	local args = self._argMap[key]
-	if args then
-		return table.unpack(args, 1, args.n)
-	else
-		error("Missing arg data, probably due to reentrance.")
-		return nil
-	end
-end
-
-function _Signal:Destroy()
-	if self._bindableEvent then
-		self._bindableEvent:Destroy()
-		self._bindableEvent = nil
-	end
-	setmetatable(self, nil)
-end
-
-library.signal = _Signal
 
 library.themes = {{
     name = 'Default',
@@ -4183,6 +4099,10 @@ function library:init()
                             end
                         end)
 
+                        utility:Connection(objs.holder.MouseButton2Down, function()
+                            bind:ShowModeMenu()
+                        end)
+
                     end
                     ----------------------
 
@@ -4275,6 +4195,45 @@ function library:init()
                     tooltip(bind);
                     bind:SetBind(bind.bind);
                     bind:SetText(bind.text);
+                    
+                    function bind:ShowModeMenu()
+                        local modeOptions = {'toggle', 'hold'}
+                        local window_dropdown = section.objects.window_dropdown
+                        
+                        window_dropdown.objects.values = {}
+                        window_dropdown.selectedValue = nil
+                        window_dropdown.option = bind
+                        
+                        for i, mode in ipairs(modeOptions) do
+                            local valueObj = {
+                                text = mode,
+                                order = i,
+                                selected = (bind.mode == mode)
+                            }
+                            table.insert(window_dropdown.objects.values, valueObj)
+                        end
+                        
+                        window_dropdown:Refresh()
+                        
+                        local dropPos = bind.objects.holder.AbsolutePosition
+                        window_dropdown.objects.background.Position = newUDim2(0, dropPos.X, 0, dropPos.Y + 20)
+                        window_dropdown.objects.background.Visible = true
+                        
+                        local selectedConnection
+                        selectedConnection = utility:Connection(window_dropdown.selected, function(value)
+                            bind:SetMode(value)
+                            window_dropdown.objects.background.Visible = false
+                            selectedConnection:Disconnect()
+                        end)
+                    end
+                    
+                    function bind:SetMode(mode)
+                        if mode == 'toggle' or mode == 'hold' then
+                            self.mode = mode
+                            -- Update visual indicator if needed
+                        end
+                    end
+                    
                     self:UpdateOptions();
                     return bind
                 end

@@ -1,12 +1,4 @@
--- Class addons --
-
-string.starts_with = function(str, start)
-    return str:sub(1, #start) == start
-end
-
-string.ends_with = function(str, ending)
-    return str:sub(#ending, 1) == ending
-end
+-- Class addon --
 
 local function class(base, init)
     local c = {}
@@ -111,6 +103,7 @@ local HookRegistry = class()
 
 function HookRegistry:init()
     self.hooks = {}
+    self.callbackCounter = 0
     self.eventSignals = {
         onInit = self:_CreateSignal("onInit"),
         onRenderStepped = self:_CreateSignal("onRenderStepped"),
@@ -156,9 +149,14 @@ function HookRegistry:_CreateSignal(name)
     return signal
 end
 
-function HookRegistry:Register(eventName, name, callback)
+function HookRegistry:Register(eventName, callback, name)
     if not self.hooks[eventName] then
         self.hooks[eventName] = {}
+    end
+
+    if not name then
+        self.callbackCounter = self.callbackCounter + 1
+        name = "callback_" .. self.callbackCounter
     end
     
     if not self.hooks[eventName][name] then
@@ -171,7 +169,12 @@ function HookRegistry:Register(eventName, name, callback)
     return self.hooks[eventName][name]:Add(callback)
 end
 
-function HookRegistry:RegisterCustom(customEventName, name, callback)
+function HookRegistry:RegisterCustom(customEventName, callback, name)
+    if not name then
+        self.callbackCounter = self.callbackCounter + 1
+        name = "callback_" .. self.callbackCounter
+    end
+    
     if not self.eventSignals.onCustom[customEventName] then
         self.eventSignals.onCustom[customEventName] = self:_CreateSignal(customEventName)
     end
@@ -226,6 +229,8 @@ end
 function HookRegistry:Initialize()
     if self.initialized then return end
     self.initialized = true
+
+    self:Fire("onInit")
     
     Services.RunService.RenderStepped:Connect(function()
         self:Fire("onRenderStepped")
@@ -242,8 +247,6 @@ function HookRegistry:Initialize()
     game.Players.PlayerRemoving:Connect(function(player)
         self:Fire("onPlayerRemoving", player)
     end)
-    
-    self:Fire("onInit")
 end
 
 local Metadata = {
@@ -271,7 +274,7 @@ local Utility = {
 
             if GameMap[tostring(place_id)] ~= nil then
                 return GameMap[tostring(place_id)]
-            elseif string.match(string(info.Name).lower(), "hood") then
+            elseif string.match(tostring(info.Name):lower(), "hood") then
                 return "Da Hood"
             end
         end
@@ -413,25 +416,35 @@ local CreateMenu = function()
         end
     })
 
-[[    Section1:AddColor({
-        enabled = true,
-        text = "Color1",
-        tooltip = "tooltip1",
-        color = Color3.fromRGB(255, 255, 255),
-        flag = "Color_1",
-        trans = 0,
-        open = false,
-        risky = false,
-        callback = function(v)
-            return
-        end
-    })
-]]
-
-    local Time = (string.format("%."..tostring(4).."f", os.clock() - Clock))
-    UI:SendNotification(("Loaded In "..tostring(Time)), 6)
+    -- [[
+    -- Section1:AddColor({
+    --     enabled = true,
+    --     text = "Color1",
+    --     tooltip = "tooltip1",
+    --     color = Color3.fromRGB(255, 255, 255),
+    --     flag = "Color_1",
+    --     trans = 0,
+    --     open = false,
+    --     risky = false,
+    --     callback = function(v)
+    --         return
+    --     end
+    -- })
+    -- ]]
 end
 
+OnLoad()
+CreateMenu()
+
 local Hooks = HookRegistry()
+
+Hooks:Register("onInit", function()
+    local Time = (string.format("%."..tostring(4).."f", os.clock() - Clock))
+    UI:SendNotification(("Loaded In "..tostring(Time)), 6)
+end)
+
+Hooks:Register("onRenderStepped", function()
+
+end)
 
 Hooks:Initialize()
