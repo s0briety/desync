@@ -238,20 +238,26 @@ function HookRegistry:Destroy()
     self:_EnsureState()
     
     for eventName, hookTable in pairs(self.hooks) do
-        for hookName, hook in pairs(hookTable) do
-            hook:Disconnect()
+        if type(hookTable) == "table" then
+            for hookName, hook in pairs(hookTable) do
+                if hook and type(hook) == "table" and hook.Disconnect then
+                    hook:Disconnect()
+                end
+            end
         end
     end
     
-    for _, signal in pairs(self.eventSignals) do
-        if signal.Destroy then
+    for eventName, signal in pairs(self.eventSignals) do
+        if eventName ~= "onCustom" and signal and signal.Destroy then
             signal:Destroy()
         end
     end
     
-    for _, signalTable in pairs(self.eventSignals.onCustom) do
-        if signalTable.Destroy then
-            signalTable:Destroy()
+    if self.eventSignals.onCustom then
+        for customEventName, signal in pairs(self.eventSignals.onCustom) do
+            if signal and signal.Destroy then
+                signal:Destroy()
+            end
         end
     end
     
