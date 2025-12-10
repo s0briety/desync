@@ -66,7 +66,6 @@ local library = {
         ['Eight'] = 8,
         ['Nine'] = 9
     },
-    signal = loadstring(game:HttpGet('https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/signal.lua'))(),
     open = false,
     opening = false,
     hasInit = false,
@@ -74,6 +73,91 @@ local library = {
     gamename = startupArgs.gamename or 'Universal',
     fileext = startupArgs.fileext or '.txt'
 }
+
+local ENABLE_TRACEBACK = false
+local _Signal = {}
+
+_Signal.__index = Signal
+_Signal.ClassName = "Signal"
+
+function _Signal.isSignal(value)
+	return type(value) == "table"
+		and getmetatable(value) == Signal
+end
+
+function _Signal.new()
+	local self = setmetatable({}, Signal)
+	self._bindableEvent = Instance.new("BindableEvent")
+	self._argMap = {}
+	self._source = ENABLE_TRACEBACK and debug.traceback() or ""
+	self._bindableEvent.Event:Connect(function(key)
+		self._argMap[key] = nil
+		if (not self._bindableEvent) and (not next(self._argMap)) then
+			self._argMap = nil
+		end
+	end)
+	return self
+end
+
+function _Signal:Fire(...)
+	if not self._bindableEvent then
+		warn(("Signal is already destroyed. %s"):format(self._source))
+		return
+	end
+	local args = table.pack(...)
+	local key = http:GenerateGUID(false)
+	self._argMap[key] = args
+	self._bindableEvent:Fire(key)
+end
+
+function _Signal:Connect(handler)
+	if not (type(handler) == "function") then
+		error(("connect(%s)"):format(typeof(handler)), 2)
+	end
+	return self._bindableEvent.Event:Connect(function(key)
+		local args = self._argMap[key]
+		if args then
+			handler(table.unpack(args, 1, args.n))
+		else
+			error("Missing arg data, probably due to reentrance.")
+		end
+	end)
+end
+
+function _Signal:Once(handler)
+	if not (type(handler) == "function") then
+		error(("once(%s)"):format(typeof(handler)), 2)
+	end
+	return self._bindableEvent.Event:Once(function(key)
+		local args = self._argMap[key]
+		if args then
+			handler(table.unpack(args, 1, args.n))
+		else
+			error("Missing arg data, probably due to reentrance.")
+		end
+	end)
+end
+
+function _Signal:Wait()
+	local key = self._bindableEvent.Event:Wait()
+	local args = self._argMap[key]
+	if args then
+		return table.unpack(args, 1, args.n)
+	else
+		error("Missing arg data, probably due to reentrance.")
+		return nil
+	end
+end
+
+function _Signal:Destroy()
+	if self._bindableEvent then
+		self._bindableEvent:Destroy()
+		self._bindableEvent = nil
+	end
+	setmetatable(self, nil)
+end
+
+library.signal = _Signal
 
 library.themes = {{
     name = 'Default',
@@ -500,6 +584,7 @@ library.utility = utility
 
 function library:Unload()
     library.unloaded:Fire();
+    inputservice.MouseIconEnabled = true;
     for _, c in next, self.connections do
         c:Disconnect()
     end
@@ -633,10 +718,13 @@ function library:init()
     local function updateCursor()
         self.cursor1.Visible = self.open
         self.cursor2.Visible = self.open
+
+        if inputservice.MouseIconEnabled ~= not self.cursor1.Visible then
+            inputservice.MouseIconEnabled = not self.cursor1.Visible;
+        end
         
         if self.cursor1.Visible then
             local pos = inputservice:GetMouseLocation();
-            inputservice.MouseIconEnabled = false;
 
             self.cursor1.PointA = pos;
             self.cursor1.PointB = pos + newVector2(16, 5);
@@ -1876,7 +1964,7 @@ function library:init()
 
         function window:AddTab(text, order)
             local tab = {
-                text = text,
+                text = string.format("  %s  ", text),
                 order = order or #self.tabs + 1,
                 callback = function()
                 end,
