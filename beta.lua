@@ -9,7 +9,10 @@ end, function(s)
     return game:GetService(s)
 end, game.Players.LocalPlayer
 
+local Signal = ls(repo .. '/modules/signal.lua')
 local HookRegistry = ls(repo .. '/modules/hooking.lua')
+
+local Hooks = HookRegistry()
 
 local Services = {
     RunService = gs("RunService"),
@@ -34,6 +37,12 @@ local Metadata = {
 
 local GameMap = {
     ["2788229376"] = "Da Hood"
+}
+
+local Cache = {
+    chat = {
+        lastSpamTime = 0,
+    }
 }
 
 local Utility = {
@@ -91,6 +100,10 @@ local OnLoad = function()
         version = version_str,
         gamename = Metadata.game
     }), os.clock()
+
+    UI.unloaded:Connect(function()
+        Hooks:FireCustom("Unload")
+    end)
 end
 
 local CreateMenu = function()
@@ -1402,7 +1415,7 @@ local CreateMenu = function()
         flag = "OtherChat_SpammerToggle",
         risky = false,
         callback = function(v)
-            return
+            Cache.chat.lastSpamTime = 0
         end
     })
 
@@ -1449,7 +1462,7 @@ local CreateMenu = function()
 
     OtherTrolling.CrashServer = OtherTrolling.Section:AddButton({
         text = "Crash Server",
-        tooltip = "Attempt to crash the entire server (Extremely Risky Exploit)",
+        tooltip = "Attempt to crash the entire server (Extremely Risky)",
         flag = "OtherTrolling_CrashServer",
         risky = true,
         callback = function()
@@ -1460,18 +1473,19 @@ local CreateMenu = function()
     Menu["OtherTrolling"] = OtherTrolling
 end
 
-local Hooks = HookRegistry()
+local onInit = function()
+    local Time = (string.format("%." .. tostring(4) .. "f", os.clock() - Clock))
+    UI:SendNotification(("Loaded In " .. tostring(Time)), 6)
+end
+
+local onRenderStepped = function()
+    
+end
 
 OnLoad()
 CreateMenu()
 
-Hooks:Register("onInit", function()
-    local Time = (string.format("%." .. tostring(4) .. "f", os.clock() - Clock))
-    UI:SendNotification(("Loaded In " .. tostring(Time)), 6)
-end)
-
-Hooks:Register("onRenderStepped", function()
-
-end)
+Hooks:Register("onInit", onInit)
+Hooks:Register("onRenderStepped", onRenderStepped)
 
 Hooks:Initialize()

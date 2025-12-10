@@ -1,9 +1,17 @@
 -- Hooking --
 
-local class = loadstring(game:HttpGet("https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/modules/class.lua"))()
-local Hook = class()
+local repo = "https://raw.githubusercontent.com/s0briety/desync/refs/heads/main"
 
-local gs = function(s) return game:GetService(s) end
+local ls, gs = function(u, d)
+    return loadstring(game:HttpGet(u))(d)
+end, function(s)
+    return game:GetService(s)
+end
+
+local class = ls(repo .. '/modules/class.lua')
+local Signal = ls(repo .. '/modules/signal.lua')
+
+local Hook = class()
 
 local Services = {
     RunService = gs("RunService"),
@@ -83,83 +91,15 @@ function HookRegistry:init()
     self.callbackCounter = 0
     self.services = Services
     
-    local function createSignal(name)
-        local signal = {}
-        signal._name = name
-        signal._connections = {}
-        
-        function signal:Connect(callback)
-            local connection = {
-                Connected = true,
-                Disconnect = function(self)
-                    self.Connected = false
-                    for i, conn in ipairs(signal._connections) do
-                        if conn == self then
-                            table.remove(signal._connections, i)
-                            break
-                        end
-                    end
-                end
-            }
-            connection._callback = callback
-            table.insert(signal._connections, connection)
-            return connection
-        end
-        
-        function signal:Fire(...)
-            for _, connection in ipairs(self._connections) do
-                if connection.Connected then
-                    connection._callback(...)
-                end
-            end
-        end
-        
-        return signal
-    end
-    
     self.eventSignals = {
-        onInit = createSignal("onInit"),
-        onRenderStepped = createSignal("onRenderStepped"),
-        onHeartbeat = createSignal("onHeartbeat"),
-        onPlayerAdded = createSignal("onPlayerAdded"),
-        onPlayerRemoving = createSignal("onPlayerRemoving"),
+        onInit = Signal.new(),
+        onRenderStepped = Signal.new(),
+        onHeartbeat = Signal.new(),
+        onPlayerAdded = Signal.new(),
+        onPlayerRemoving = Signal.new(),
         onCustom = {}
     }
     self.initialized = false
-end
-
-function HookRegistry:_CreateSignal(name)
-    local signal = {}
-    signal._name = name
-    signal._connections = {}
-    
-    function signal:Connect(callback)
-        local connection = {
-            Connected = true,
-            Disconnect = function(self)
-                self.Connected = false
-                for i, conn in ipairs(signal._connections) do
-                    if conn == self then
-                        table.remove(signal._connections, i)
-                        break
-                    end
-                end
-            end
-        }
-        connection._callback = callback
-        table.insert(signal._connections, connection)
-        return connection
-    end
-    
-    function signal:Fire(...)
-        for _, connection in ipairs(self._connections) do
-            if connection.Connected then
-                connection._callback(...)
-            end
-        end
-    end
-    
-    return signal
 end
 
 function HookRegistry:_EnsureState()
@@ -170,11 +110,11 @@ function HookRegistry:_EnsureState()
     self.services = self.services or Services
     if not self.eventSignals then
         self.eventSignals = {
-            onInit = self:_CreateSignal("onInit"),
-            onRenderStepped = self:_CreateSignal("onRenderStepped"),
-            onHeartbeat = self:_CreateSignal("onHeartbeat"),
-            onPlayerAdded = self:_CreateSignal("onPlayerAdded"),
-            onPlayerRemoving = self:_CreateSignal("onPlayerRemoving"),
+            onInit = Signal.new(),
+            onRenderStepped = Signal.new(),
+            onHeartbeat = Signal.new(),
+            onPlayerAdded = Signal.new(),
+            onPlayerRemoving = Signal.new(),
             onCustom = {}
         }
     end
