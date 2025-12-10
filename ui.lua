@@ -2497,7 +2497,7 @@ function library:init()
                             self.objects.keyText.ThemeColor = self.objects.holder.Hover and 'Accent' or 'Option Text 3';
                         end
 
-                        function bind:SetKeyText(str, mode)
+                        function bind:SetKeyText(str)
                             str = tostring(str);
                             self.objects.keyText.Text = '[' .. str .. ']' .. ' - ';
                             self.objects.keyText.Position = newUDim2(0, 2, 0, 2);
@@ -4207,8 +4207,10 @@ function library:init()
                     function bind:SetMode(mode)
                         if mode == 'toggle' or mode == 'hold' then
                             self.mode = mode
-                            local modeText = mode == 'hold' and '(HOLD)' or '(TOGGLE)'
-                            self.objects.modeText.Text = modeText
+                            -- Update the indicator value to show the current mode
+                            local modeLabel = mode == 'hold' and '[H]' or '[T]'
+                            local currentKey = self.objects.keyText.Text
+                            self.indicatorValue:SetValue(currentKey .. ' ' .. modeLabel)
                         end
                     end
                     
