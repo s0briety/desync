@@ -445,7 +445,7 @@ local CreateMenu = function()
         end
     })
 
-    LegitTab:AddSeparator({})
+    LegitAimbot.Section:AddSeparator({})
 
     LegitAimbot.Aimbotmode = LegitAimbot.Section:AddList({
         enabled = true,
@@ -478,7 +478,7 @@ local CreateMenu = function()
         end
     })
 
-    LegitTab:AddSeparator({})
+    LegitAimbot.Section:AddSeparator({})
 
     LegitAimbot.Priority = LegitAimbot.Section:AddList({
         enabled = true,
@@ -815,7 +815,17 @@ local CreateMenu = function()
         end
     })
 
-    RageTab:AddSeparator({})
+    Ragebot.Section:AddSeparator({})
+
+    Ragebot.AutoFire = Ragebot.Section:AddToggle({
+        text = "Autofire",
+        state = false,
+        tooltip = "Toggle ragebot auto firing (auto shoot)",
+        flag = "Toggle_1",
+        callback = function(v)
+            return
+        end
+    })
 
     Ragebot.Aimbotmode = Ragebot.Section:AddList({
         enabled = true,
@@ -848,7 +858,7 @@ local CreateMenu = function()
         end
     })
 
-    RageTab:AddSeparator({})
+    Ragebot.Section:AddSeparator({})
 
     Ragebot.Priority = Ragebot.Section:AddList({
         enabled = true,
@@ -874,16 +884,6 @@ local CreateMenu = function()
         risky = false,
         callback = function(v)
 
-        end
-    })
-
-    Ragebot.AutoFire = Ragebot.Section:AddToggle({
-        text = "Autofire",
-        state = false,
-        tooltip = "Toggle ragebot auto firing (auto shoot)",
-        flag = "Toggle_1",
-        callback = function(v)
-            return
         end
     })
 
