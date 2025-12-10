@@ -3,6 +3,18 @@
 local class = loadstring(game:HttpGet("https://raw.githubusercontent.com/s0briety/desync/refs/heads/main/modules/class.lua"))()
 local Hook = class()
 
+local gs = function(s) return game:GetService(s) end
+
+local Services = {
+    RunService = gs("RunService"),
+    HTTPService = gs("HttpService"),
+    TeleportService = gs("TeleportService"),
+    MarketplaceService = gs("MarketplaceService"),
+    TextChatService = gs("TextChatService"),
+    Lighting = gs("Lighting"),
+    Players = gs("Players")
+}
+
 function Hook:init(name)
     self.name = name
     self.callbacks = {}
