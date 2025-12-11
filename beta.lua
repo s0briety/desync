@@ -107,11 +107,12 @@ local OnLoad = function()
 end
 
 local onUnload = function()
-    UI.unloaded:Destroy()
-    Hooks:Destroy()
-
-    script:Destroy()
-    script = nil
+    if UI and UI.unloaded and UI.unloaded.Destroy then
+        UI.unloaded:Destroy()
+    end
+    if Hooks and Hooks.Destroy then
+        Hooks:Destroy()
+    end
 end
 
 local CreateMenu = function()
@@ -1225,6 +1226,74 @@ local CreateMenu = function()
     })
 
     Menu["VisualsEffects"] = VisualsEffects
+
+    -- Visuals Indicators (Column 2)
+    local VisualsIndicators = {
+        Section = VisualsTab:AddSection("Indicators", 2)
+    }
+
+    VisualsIndicators.Section:AddToggle({
+        text = 'Watermark',
+        flag = 'watermark_enabled',
+        state = true
+    })
+
+    VisualsIndicators.Section:AddSlider({
+        text = 'Custom X',
+        flag = 'watermark_x',
+        suffix = '%',
+        min = 0,
+        max = 100,
+        increment = 0.1,
+        value = 6
+    })
+
+    VisualsIndicators.Section:AddSlider({
+        text = 'Custom Y',
+        flag = 'watermark_y',
+        suffix = '%',
+        min = 0,
+        max = 100,
+        increment = 0.1,
+        value = 1
+    })
+
+    VisualsIndicators.Section:AddSeparator({})
+
+    VisualsIndicators.Section:AddToggle({
+        text = 'Keybinds',
+        flag = 'keybind_indicator',
+        state = true,
+        callback = function(bool)
+            UI.keyIndicator:SetEnabled(bool);
+        end
+    })
+
+    VisualsIndicators.Section:AddSlider({
+        text = 'Position X',
+        flag = 'keybind_indicator_x',
+        min = 0,
+        max = 100,
+        increment = 0.1,
+        value = 0.5,
+        callback = function()
+            UI.keyIndicator:SetPosition(UDim2.new(UI.flags.keybind_indicator_x / 100, 0,
+                UI.flags.keybind_indicator_y / 100, 0));
+        end
+    })
+
+    VisualsIndicators.Section:AddSlider({
+        text = 'Position Y',
+        flag = 'keybind_indicator_y',
+        min = 0,
+        max = 100,
+        increment = 0.1,
+        value = 30,
+        callback = function()
+            UI.keyIndicator:SetPosition(UDim2.new(UI.flags.keybind_indicator_x / 100, 0,
+                UI.flags.keybind_indicator_y / 100, 0));
+        end
+    })
 
     ---
     --- WORLD TAB (Column 1)
