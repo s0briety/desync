@@ -99,8 +99,8 @@ library.themes = {{
         ['Option Border 1'] = fromrgb(47, 47, 47),
         ['Option Border 2'] = fromrgb(0, 0, 0),
         ['Option Background'] = fromrgb(35, 35, 35),
-        ["Risky Text"] = fromrgb(175, 21, 21),
-        ["Risky Text Enabled"] = fromrgb(255, 41, 41)
+        ["Risky Text"] = fromrgb(190, 112, 255),
+        ["Risky Text Enabled"] = fromrgb(190, 112, 255)
     }
 }, {
     name = 'Midnight',

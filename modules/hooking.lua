@@ -93,6 +93,7 @@ function HookRegistry:init()
     
     self.eventSignals = {
         onInit = Signal.new(),
+        onStepped = Signal.new(),
         onRenderStepped = Signal.new(),
         onHeartbeat = Signal.new(),
         onPlayerAdded = Signal.new(),
@@ -111,6 +112,7 @@ function HookRegistry:_EnsureState()
     if not self.eventSignals then
         self.eventSignals = {
             onInit = Signal.new(),
+            onStepped = Signal.new(),
             onRenderStepped = Signal.new(),
             onHeartbeat = Signal.new(),
             onPlayerAdded = Signal.new(),
@@ -217,6 +219,9 @@ function HookRegistry:Initialize()
 
     self:Fire("onInit")
     
+    self.services.RunService.Stepped:Connect(function()
+        self:Fire("onStepped")
+    end)
     self.services.RunService.RenderStepped:Connect(function()
         self:Fire("onRenderStepped")
     end)
