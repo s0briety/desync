@@ -46,10 +46,6 @@ local Cache = {
     afk = {
         interval = 25,
         max_time = 30 * 60
-    },
-    esp = {
-        screengui = Instance.new("ScreenGui"),
-        containers = {}
     }
 }
 
@@ -73,12 +69,12 @@ local Utility = {
         return "Universal"
     end,
 
-    createGuiElement = function(element)
-        local element = Instance.new(element.className)
-        element.Name = element.name
-        element.ZIndex = element.zindex or 9999999
+    createGuiElement = function(el)
+        local element = Instance.new(el.class)
+        element.Name = el.name
+        element.ZIndex = el.zindex or 9999999
         element.BackgroundTransparency = 1
-        element.Parent = element.parent
+        element.Parent = el.parent
         return element
     end,
 
@@ -250,204 +246,6 @@ local General = {
         end
     end
 }
-
-local ESP = {}
-
-ESP.createEspContainer = function(targetPlayer)
-    local Container = Utility.createGuiElement("Frame", targetPlayer.Name .. "_ESP", Cache.esp.screengui)
-    Container.Size = UDim2.new(0, 100, 0, 100)
-    Container.AnchorPoint = Vector2.new(0.5, 0.5)
-
-    local Config = Menu["VisualsESP"]
-    local NameLabel = Utility.createGuiElement("TextLabel", "NameESP", Container)
-    NameLabel.TextColor3 = Config.NameColor.color
-    NameLabel.TextScaled = false
-    NameLabel.FontSize = Enum.FontSize.Size14
-    NameLabel.Font = Enum.Font.SourceSansBold
-    NameLabel.TextSize = Config.FontSize
-    NameLabel.Text = targetPlayer.Name
-    NameLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
-    NameLabel.Position = UDim2.new(0, 0, 0, -(Config.FontSize + 4) * 3)
-
-    local DistanceLabel = Utility.createGuiElement("TextLabel", "DistanceESP", Container)
-    DistanceLabel.TextColor3 = Config.DistanceColor.color
-    DistanceLabel.TextScaled = false
-    DistanceLabel.TextSize = Config.FontSize
-    DistanceLabel.Font = Enum.Font.SourceSansSemibold
-    DistanceLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
-    DistanceLabel.Position = UDim2.new(0, 0, 1, 0)
-
-    local HealthLabel = Utility.createGuiElement("TextLabel", "HealthESP", Container)
-    HealthLabel.TextColor3 = Config.HighHealthColor.color
-    HealthLabel.TextScaled = false
-    HealthLabel.TextSize = Config.FontSize
-    HealthLabel.Font = Enum.Font.SourceSansSemibold
-    HealthLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
-    HealthLabel.Position = UDim2.new(0, 0, 0, -(Config.FontSize + 4) * 2)
-
-    local WeaponLabel = Utility.createGuiElement("TextLabel", "WeaponESP", Container)
-    WeaponLabel.TextColor3 = Config.WeaponColor.color
-    WeaponLabel.TextScaled = false
-    WeaponLabel.TextSize = Config.FontSize
-    WeaponLabel.Font = Enum.Font.SourceSansSemibold
-    WeaponLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
-    WeaponLabel.Position = UDim2.new(0, 0, 0, -(Config.FontSize + 4))
-
-    local BoxFrame = Utility.createGuiElement("Frame", "BoxFrame", Container)
-    BoxFrame.BackgroundColor3 = Config.BoxColor.color
-    BoxFrame.BackgroundTransparency = 1
-
-    local containerTable = {
-        Container = Container,
-        Name = NameLabel,
-        Distance = DistanceLabel,
-        Health = HealthLabel,
-        Weapon = WeaponLabel,
-        Box = BoxFrame
-    }
-
-    Cache.esp.containers[targetPlayer] = containerTable
-    return containerTable
-end
-
-ESP.drawBox = function(boxFrame, topLeft, size)
-    local Config = Menu["VisualsESP"]
-
-    local w = size.X
-    local h = size.Y
-    local color = Config.BoxColor.color
-
-    for _, child in ipairs(boxFrame:GetChildren()) do
-        child:Destroy()
-    end
-
-    boxFrame.Position = UDim2.new(0, topLeft.X, 0, topLeft.Y)
-    boxFrame.Size = UDim2.new(0, w, 0, h)
-    boxFrame.BackgroundTransparency = 1
-    boxFrame.BorderSizePixel = 0
-
-    if Config.BoxType.selected == "Bounding" or Config.BoxType.selected == "Outline" or Config.BoxType.selected ==
-        "Static" then
-        boxFrame.BorderSizePixel = 1
-        boxFrame.BackgroundColor3 = color
-        boxFrame.BackgroundTransparency = 1
-        boxFrame.BorderColor3 = color
-
-        if Config.BoxType.selected == "Static" then
-            boxFrame.BorderSizePixel = 2
-        end
-
-    elseif Config.BoxType.selected == "Corner" then
-        local cornerLength = math.min(w, h) * 0.2
-        local thickness = 2
-
-        local function createCornerPiece(pos, size)
-            local frame = Utility.createGuiElement("Frame", "Corner", boxFrame)
-            frame.Position = pos
-            frame.Size = size
-            frame.BackgroundColor3 = color
-            frame.BorderSizePixel = 0
-            return frame
-        end
-
-        createCornerPiece(UDim2.new(0, 0, 0, 0), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal TL
-        createCornerPiece(UDim2.new(0, 0, 0, 0), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical TL
-
-        createCornerPiece(UDim2.new(1, -cornerLength, 0, 0), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal TR
-        createCornerPiece(UDim2.new(1, -thickness, 0, 0), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical TR
-
-        createCornerPiece(UDim2.new(0, 0, 1, -thickness), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal BL
-        createCornerPiece(UDim2.new(0, 0, 1, -cornerLength), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical BL
-
-        createCornerPiece(UDim2.new(1, -cornerLength, 1, -thickness), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal BR
-        createCornerPiece(UDim2.new(1, -thickness, 1, -cornerLength), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical BR
-    end
-end
-
-ESP.updateEsp = function()
-    if not lp.Character or not lp.Character:FindFirstChild("HumanoidRootPart") then
-        return
-    end
-
-    local Config = Menu["VisualsESP"]
-    local localHRP = lp.Character.HumanoidRootPart
-    local camera = game.Workspace.CurrentCamera
-
-    if not camera then
-        return
-    end
-
-    local currentVisibleTargets = {}
-
-    for _, targetPlayer in ipairs(Services.Players:GetPlayers()) do
-        if targetPlayer ~= Player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-            local character = targetPlayer.Character
-            local targetHRP = character:FindFirstChild("HumanoidRootPart")
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-
-            if targetHRP and humanoid.Health > 0 and character:FindFirstChild("Head") then
-                local distance = (localHRP.Position - targetHRP.Position).Magnitude
-
-                if distance <= Config.MaxDistance.value then
-                    local topLeft, size, headPos, feetPos = Utility.calculateBounds(character)
-
-                    if topLeft and size.X > 0 and size.Y > 0 then
-                        currentVisibleTargets[targetPlayer] = true
-                        local esp = Utility.espContainers[targetPlayer]
-
-                        if not esp then
-                            esp = Utility.createEspContainer(targetPlayer)
-                        end
-
-                        -- Make container visible
-                        esp.Container.Visible = true
-
-                        ESP.drawBox(esp.Box, topLeft, size)
-
-                        esp.Container.Position = UDim2.new(0, topLeft.X + size.X / 2, 0, topLeft.Y + size.Y / 2)
-
-                        esp.Name.Text = targetPlayer.DisplayName
-
-                        esp.Health.Text = string.format("Health: %d/100", math.round(humanoid.Health))
-
-                        esp.Distance.Text = string.format("Dist: %d m", math.round(distance))
-
-                        esp.Weapon.Text = string.format("Wpn: %s", Utility.getWeaponName(targetPlayer))
-
-                        esp.Container.Position = UDim2.new(0, topLeft.X, 0, topLeft.Y)
-                        esp.Container.Size = UDim2.new(0, size.X, 0, size.Y)
-
-                        local textYOffset = Config.FontSize.value + 4
-                        esp.Name.Position = UDim2.new(0, 0, 0, -textYOffset * 4)
-                        esp.Health.Position = UDim2.new(0, 0, 0, -textYOffset * 3)
-                        esp.Weapon.Position = UDim2.new(0, 0, 0, -textYOffset * 2)
-
-                        esp.Distance.Position = UDim2.new(0, 0, 1, 0)
-
-                    else
-                        local esp = Cache.esp.containers[targetPlayer]
-                        if esp then
-                            esp.Container.Visible = false
-                        end
-                    end
-                else
-                    local esp = Cache.esp.containers[targetPlayer]
-                    if esp then
-                        esp.Container.Visible = false
-                    end
-                end
-            end
-        end
-    end
-
-    for targetPlayer, esp in pairs(Cache.esp.containers) do
-        if not targetPlayer:IsDescendantOf(Services.Players) or not currentVisibleTargets[targetPlayer] then
-            if esp.Container.Parent then
-                esp.Container.Visible = false
-            end
-        end
-    end
-end
 
 -- Menu Creation --
 
@@ -1486,8 +1284,8 @@ local CreateMenu = function()
         dragging = true,
         suffix = "px",
         focused = false,
-        min = 8,
-        max = 24,
+        min = 1,
+        max = 6,
         increment = 1,
         risky = false,
         callback = function(v)
@@ -2151,10 +1949,6 @@ end
 
 local onRenderStepped = function()
     local curTime = os.time()
-
-    if Menu["VisualsESP"].Toggle.state then
-        ESP.updateEsp()
-    end
 end
 
 OnLoad()
