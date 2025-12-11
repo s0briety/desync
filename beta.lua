@@ -46,7 +46,15 @@ local Cache = {
     afk = {
         interval = 25,
         max_time = 30 * 60
+    },
+    esp = {
+        screengui = Instance.new("ScreenGui"),
+        containers = {}
     }
+}
+
+local PlayerStorage = {
+    PlayerGui = lp:WaitForChild("PlayerGui")
 }
 
 local Utility = {
@@ -65,7 +73,62 @@ local Utility = {
         return "Universal"
     end,
 
-    center_pad = function(str, total_length, pad_char)
+    createGuiElement = function(element)
+        local element = Instance.new(element.className)
+        element.Name = element.name
+        element.ZIndex = element.zindex or 9999999
+        element.BackgroundTransparency = 1
+        element.Parent = element.parent
+        return element
+    end,
+
+    getCharacterBounds = function(character)
+        local head = character:FindFirstChild("Head")
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+        if not head or not hrp or not humanoid then
+            return
+        end
+
+        local camera = Workspace.CurrentCamera
+        if not camera then
+            return
+        end
+
+        local headPos, headOnScreen = camera:WorldToScreenPoint(head.Position + Vector3.new(0, 0.5, 0))
+        local feetPos, feetOnScreen = camera:WorldToScreenPoint(hrp.Position - Vector3.new(0, humanoid.HipHeight, 0))
+
+        if not headOnScreen or not feetOnScreen then
+            return
+        end
+
+        local height = feetPos.Y - headPos.Y
+        local center = Vector2.new(headPos.X, headPos.Y + height / 2)
+        local width = height * 0.4
+
+        local topLeft = Vector2.new(center.X - width / 2, headPos.Y)
+        local size = Vector2.new(width, height)
+
+        return topLeft, size, headPos, feetPos
+    end,
+
+    getPlayerWeapon = function(targetPlayer)
+        local backpack = targetPlayer:FindFirstChild("Backpack")
+        local character = targetPlayer.Character
+
+        local tool
+        if backpack then
+            tool = backpack:FindFirstChildOfClass("Tool")
+        end
+        if not tool and character then
+            tool = character:FindFirstChildOfClass("Tool")
+        end
+
+        return tool and tool.Name or "None"
+    end,
+
+    CenterPad = function(str, total_length, pad_char)
         pad_char = pad_char or " "
 
         local current_length = #str
@@ -121,74 +184,268 @@ local onUnload = function()
     end
 end
 
-local ToggleNoclip = function(state)
-    local character = lp.Character
-    if not character then
-        return
-    end
+-- Cheat Functions --
 
-    for _, part in ipairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = not state
-        end
-    end
-    
-    local Humanoid = character:FindFirstChildOfClass("Humanoid")
-    if Humanoid then
-        -- Humanoid.PlatformStand = state
-    end
-end
-
-local AntiAFKLoop = function()
-    local function AntiAFK()
+local General = {
+    ToggleNoclip = function(state)
         local character = lp.Character
-
-        if not character or not character:FindFirstChild("HumanoidRootPart") then
+        if not character then
             return
         end
 
-        local HRP = character.HumanoidRootPart
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not state
+            end
+        end
+    end,
 
-        local originalPosition = HRP.CFrame
+    AntiAFKLoop = function()
+        local function AntiAFK()
+            local character = lp.Character
 
-        HRP.CFrame = originalPosition + Vector3.new(0, 0, 0.001)
+            if not character or not character:FindFirstChild("HumanoidRootPart") then
+                return
+            end
 
-        wait(0.005)
-        HRP.CFrame = originalPosition
+            local HRP = character.HumanoidRootPart
+
+            local originalPosition = HRP.CFrame
+
+            HRP.CFrame = originalPosition + Vector3.new(0, 0, 0.001)
+
+            wait(0.005)
+            HRP.CFrame = originalPosition
+        end
+
+        while true do
+            wait(Cache.afk.interval)
+            if Menu["WorldExploits"].AntiAfk.state then
+                AntiAFK()
+            end
+        end
+    end,
+
+    ChatSpam = function(curTime)
+        local chatSettings = Menu["OtherChat"]
+
+        if not chatSettings or not chatSettings.Text or not chatSettings.Text.input or not chatSettings.Delay or
+            not chatSettings.Delay.value then
+            return
+        end
+
+        local delay = tonumber(chatSettings.Delay.value)
+
+        if delay == nil or delay < 0 then
+            delay = 1
+        end
+
+        local lastSpamTime = Cache.chat.lastSpamTime or 0
+        local timeElapsed = curTime - lastSpamTime
+
+        if timeElapsed >= delay then
+            Services.TextChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(chatSettings.Text.input)
+
+            Cache.chat.lastSpamTime = curTime
+        end
+    end
+}
+
+local ESP = {}
+
+ESP.createEspContainer = function(targetPlayer)
+    local Container = Utility.createGuiElement("Frame", targetPlayer.Name .. "_ESP", Cache.esp.screengui)
+    Container.Size = UDim2.new(0, 100, 0, 100)
+    Container.AnchorPoint = Vector2.new(0.5, 0.5)
+
+    local Config = Menu["VisualsESP"]
+    local NameLabel = Utility.createGuiElement("TextLabel", "NameESP", Container)
+    NameLabel.TextColor3 = Config.NameColor.color
+    NameLabel.TextScaled = false
+    NameLabel.FontSize = Enum.FontSize.Size14
+    NameLabel.Font = Enum.Font.SourceSansBold
+    NameLabel.TextSize = Config.FontSize
+    NameLabel.Text = targetPlayer.Name
+    NameLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
+    NameLabel.Position = UDim2.new(0, 0, 0, -(Config.FontSize + 4) * 3)
+
+    local DistanceLabel = Utility.createGuiElement("TextLabel", "DistanceESP", Container)
+    DistanceLabel.TextColor3 = Config.DistanceColor.color
+    DistanceLabel.TextScaled = false
+    DistanceLabel.TextSize = Config.FontSize
+    DistanceLabel.Font = Enum.Font.SourceSansSemibold
+    DistanceLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
+    DistanceLabel.Position = UDim2.new(0, 0, 1, 0)
+
+    local HealthLabel = Utility.createGuiElement("TextLabel", "HealthESP", Container)
+    HealthLabel.TextColor3 = Config.HighHealthColor.color
+    HealthLabel.TextScaled = false
+    HealthLabel.TextSize = Config.FontSize
+    HealthLabel.Font = Enum.Font.SourceSansSemibold
+    HealthLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
+    HealthLabel.Position = UDim2.new(0, 0, 0, -(Config.FontSize + 4) * 2)
+
+    local WeaponLabel = Utility.createGuiElement("TextLabel", "WeaponESP", Container)
+    WeaponLabel.TextColor3 = Config.WeaponColor.color
+    WeaponLabel.TextScaled = false
+    WeaponLabel.TextSize = Config.FontSize
+    WeaponLabel.Font = Enum.Font.SourceSansSemibold
+    WeaponLabel.Size = UDim2.new(1, 0, 0, Config.FontSize + 4)
+    WeaponLabel.Position = UDim2.new(0, 0, 0, -(Config.FontSize + 4))
+
+    local BoxFrame = Utility.createGuiElement("Frame", "BoxFrame", Container)
+    BoxFrame.BackgroundColor3 = Config.BoxColor.color
+    BoxFrame.BackgroundTransparency = 1
+
+    local containerTable = {
+        Container = Container,
+        Name = NameLabel,
+        Distance = DistanceLabel,
+        Health = HealthLabel,
+        Weapon = WeaponLabel,
+        Box = BoxFrame
+    }
+
+    Cache.esp.containers[targetPlayer] = containerTable
+    return containerTable
+end
+
+ESP.drawBox = function(boxFrame, topLeft, size)
+    local Config = Menu["VisualsESP"]
+
+    local w = size.X
+    local h = size.Y
+    local color = Config.BoxColor.color
+
+    for _, child in ipairs(boxFrame:GetChildren()) do
+        child:Destroy()
     end
 
-    while true do
-        wait(Cache.afk.interval)
-        if Menu["WorldExploits"].AntiAfk.state then
-           AntiAFK() 
+    boxFrame.Position = UDim2.new(0, topLeft.X, 0, topLeft.Y)
+    boxFrame.Size = UDim2.new(0, w, 0, h)
+    boxFrame.BackgroundTransparency = 1
+    boxFrame.BorderSizePixel = 0
+
+    if Config.BoxType.selected == "Bounding" or Config.BoxType.selected == "Outline" or Config.BoxType.selected ==
+        "Static" then
+        boxFrame.BorderSizePixel = 1
+        boxFrame.BackgroundColor3 = color
+        boxFrame.BackgroundTransparency = 1
+        boxFrame.BorderColor3 = color
+
+        if Config.BoxType.selected == "Static" then
+            boxFrame.BorderSizePixel = 2
         end
+
+    elseif Config.BoxType.selected == "Corner" then
+        local cornerLength = math.min(w, h) * 0.2
+        local thickness = 2
+
+        local function createCornerPiece(pos, size)
+            local frame = Utility.createGuiElement("Frame", "Corner", boxFrame)
+            frame.Position = pos
+            frame.Size = size
+            frame.BackgroundColor3 = color
+            frame.BorderSizePixel = 0
+            return frame
+        end
+
+        createCornerPiece(UDim2.new(0, 0, 0, 0), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal TL
+        createCornerPiece(UDim2.new(0, 0, 0, 0), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical TL
+
+        createCornerPiece(UDim2.new(1, -cornerLength, 0, 0), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal TR
+        createCornerPiece(UDim2.new(1, -thickness, 0, 0), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical TR
+
+        createCornerPiece(UDim2.new(0, 0, 1, -thickness), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal BL
+        createCornerPiece(UDim2.new(0, 0, 1, -cornerLength), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical BL
+
+        createCornerPiece(UDim2.new(1, -cornerLength, 1, -thickness), UDim2.new(0, cornerLength, 0, thickness)) -- Horizontal BR
+        createCornerPiece(UDim2.new(1, -thickness, 1, -cornerLength), UDim2.new(0, thickness, 0, cornerLength)) -- Vertical BR
     end
 end
 
-local ChatSpam = function(curTime)
-    local chatSettings = Menu["OtherChat"]
-
-    if not chatSettings or 
-       not chatSettings.Text or 
-       not chatSettings.Text.input or 
-       not chatSettings.Delay or 
-       not chatSettings.Delay.value then
+ESP.updateEsp = function()
+    if not lp.Character or not lp.Character:FindFirstChild("HumanoidRootPart") then
         return
     end
 
-    local delay = tonumber(chatSettings.Delay.value)
-    
-    if delay == nil or delay < 0 then 
-        delay = 1
-    end
-    
-    local lastSpamTime = Cache.chat.lastSpamTime or 0
-    local timeElapsed = curTime - lastSpamTime
+    local Config = Menu["VisualsESP"]
+    local localHRP = lp.Character.HumanoidRootPart
+    local camera = game.Workspace.CurrentCamera
 
-    if timeElapsed >= delay then
-        Services.TextChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(chatSettings.Text.input)
-        
-        Cache.chat.lastSpamTime = curTime
+    if not camera then
+        return
+    end
+
+    local currentVisibleTargets = {}
+
+    for _, targetPlayer in ipairs(Services.Players:GetPlayers()) do
+        if targetPlayer ~= Player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+            local character = targetPlayer.Character
+            local targetHRP = character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+            if targetHRP and humanoid.Health > 0 and character:FindFirstChild("Head") then
+                local distance = (localHRP.Position - targetHRP.Position).Magnitude
+
+                if distance <= Config.MaxDistance.value then
+                    local topLeft, size, headPos, feetPos = Utility.calculateBounds(character)
+
+                    if topLeft and size.X > 0 and size.Y > 0 then
+                        currentVisibleTargets[targetPlayer] = true
+                        local esp = Utility.espContainers[targetPlayer]
+
+                        if not esp then
+                            esp = Utility.createEspContainer(targetPlayer)
+                        end
+
+                        -- Make container visible
+                        esp.Container.Visible = true
+
+                        ESP.drawBox(esp.Box, topLeft, size)
+
+                        esp.Container.Position = UDim2.new(0, topLeft.X + size.X / 2, 0, topLeft.Y + size.Y / 2)
+
+                        esp.Name.Text = targetPlayer.DisplayName
+
+                        esp.Health.Text = string.format("Health: %d/100", math.round(humanoid.Health))
+
+                        esp.Distance.Text = string.format("Dist: %d m", math.round(distance))
+
+                        esp.Weapon.Text = string.format("Wpn: %s", Utility.getWeaponName(targetPlayer))
+
+                        esp.Container.Position = UDim2.new(0, topLeft.X, 0, topLeft.Y)
+                        esp.Container.Size = UDim2.new(0, size.X, 0, size.Y)
+
+                        local textYOffset = Config.FontSize.value + 4
+                        esp.Name.Position = UDim2.new(0, 0, 0, -textYOffset * 4)
+                        esp.Health.Position = UDim2.new(0, 0, 0, -textYOffset * 3)
+                        esp.Weapon.Position = UDim2.new(0, 0, 0, -textYOffset * 2)
+
+                        esp.Distance.Position = UDim2.new(0, 0, 1, 0)
+
+                    else
+                        local esp = Cache.esp.containers[targetPlayer]
+                        if esp then
+                            esp.Container.Visible = false
+                        end
+                    end
+                else
+                    local esp = Cache.esp.containers[targetPlayer]
+                    if esp then
+                        esp.Container.Visible = false
+                    end
+                end
+            end
+        end
+    end
+
+    for targetPlayer, esp in pairs(Cache.esp.containers) do
+        if not targetPlayer:IsDescendantOf(Services.Players) or not currentVisibleTargets[targetPlayer] then
+            if esp.Container.Parent then
+                esp.Container.Visible = false
+            end
+        end
     end
 end
 
@@ -202,11 +459,11 @@ local CreateMenu = function()
         size = UDim2.new(0, 510, 0.6, 6)
     })
 
-    local LegitTab = MainWindow:AddTab(Utility.center_pad("Legit", 8))
-    local RageTab = MainWindow:AddTab(Utility.center_pad("Rage", 8))
-    local VisualsTab = MainWindow:AddTab(Utility.center_pad("Visuals", 8))
-    local WorldTab = MainWindow:AddTab(Utility.center_pad("World", 8))
-    local OtherTab = MainWindow:AddTab(Utility.center_pad("Other", 8))
+    local LegitTab = MainWindow:AddTab(Utility.CenterPad("Legit", 8))
+    local RageTab = MainWindow:AddTab(Utility.CenterPad("Rage", 8))
+    local VisualsTab = MainWindow:AddTab(Utility.CenterPad("Visuals", 8))
+    local WorldTab = MainWindow:AddTab(Utility.CenterPad("World", 8))
+    local OtherTab = MainWindow:AddTab(Utility.CenterPad("Other", 8))
     local SettingsTab = UI:CreateSettingsTab(MainWindow)
 
     ---
@@ -1083,7 +1340,7 @@ local CreateMenu = function()
     VisualsESP.Box = VisualsESP.Section:AddToggle({
         text = "Box",
         state = false,
-        tooltip = "Draw a 2D or 3D box around targets",
+        tooltip = "Draw a box around targets",
         flag = "VisualsESP_Box",
         callback = function(v)
             return
@@ -1105,9 +1362,9 @@ local CreateMenu = function()
 
     VisualsESP.BoxColor = VisualsESP.Box:AddColor({
         enabled = true,
-        text = "Box Fill Color",
+        text = "Box Color",
         tooltip = "Color for the box",
-        color = Color3.fromRGB(20, 20, 20),
+        color = Color3.fromRGB(255, 255, 255),
         flag = "VisualsESP_BoxColor",
         open = false,
         risky = false,
@@ -1126,12 +1383,51 @@ local CreateMenu = function()
         end
     })
 
+    VisualsESP.NameColor = VisualsESP.Name:AddColor({
+        enabled = true,
+        text = "Name Color",
+        tooltip = "Color for the name",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "VisualsESP_NameColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
     VisualsESP.Health = VisualsESP.Section:AddToggle({
         text = "Health",
         state = false,
         tooltip = "Display target player health bar/text",
         flag = "VisualsESP_Health",
         callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.HighHealthColor = VisualsESP.Health:AddColor({
+        enabled = true,
+        text = "High Health Color",
+        tooltip = "Color to indicate high health",
+        color = Color3.fromRGB(0, 255, 0),
+        flag = "VisualsESP_HighHealthColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
+    VisualsESP.LowHealthColor = VisualsESP.Health:AddColor({
+        enabled = true,
+        text = "Low Health Color",
+        tooltip = "Color to indicate low health",
+        color = Color3.fromRGB(255, 0, 0),
+        flag = "VisualsESP_LowHealthColor",
+        open = false,
+        risky = false,
+        callback = function()
             return
         end
     })
@@ -1146,12 +1442,38 @@ local CreateMenu = function()
         end
     })
 
+    VisualsESP.DistanceColor = VisualsESP.Distance:AddColor({
+        enabled = true,
+        text = "Distance Color",
+        tooltip = "Color for the distance",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "VisualsESP_DistanceColor",
+        open = false,
+        risky = false,
+        callback = function()
+            return
+        end
+    })
+
     VisualsESP.Weapon = VisualsESP.Section:AddToggle({
         text = "Weapon",
         state = false,
         tooltip = "Display enemy current weapon name",
         flag = "VisualsChams_Weapon",
         callback = function(v)
+            return
+        end
+    })
+
+    VisualsESP.WeaponColor = VisualsESP.Weapon:AddColor({
+        enabled = true,
+        text = "Weapon Color",
+        tooltip = "Color for the weapon",
+        color = Color3.fromRGB(255, 255, 255),
+        flag = "VisualsESP_WeaponColor",
+        open = false,
+        risky = false,
+        callback = function()
             return
         end
     })
@@ -1801,25 +2123,37 @@ local CreateMenu = function()
 end
 
 local onInit = function()
+    Cache.esp.screengui.Name = "ESP_LAYER"
+    Cache.esp.screengui.ResetOnSpawn = false
+    Cache.esp.screengui.Parent = PlayerStorage.PlayerGui
+
     local Time = (string.format("%." .. tostring(4) .. "f", os.clock() - Clock))
     UI:SendNotification(("Loaded In " .. tostring(Time)), 6)
 
-    spawn(AntiAFKLoop)
+    spawn(General.AntiAFKLoop)
+end
+
+local onStepped = function()
+    local curTime = os.time()
+
+    if Menu["OtherChat"].Spammer.state then
+        General.ChatSpam(curTime)
+    end
+
+    if Menu["WorldExploits"].Noclip.state then
+        local bind = Menu["WorldExploits"].NoclipBind
+
+        if not bind or bind.bind == 'None' or bind.state then
+            General.ToggleNoclip(true)
+        end
+    end
 end
 
 local onRenderStepped = function()
     local curTime = os.time()
 
-    if Menu["OtherChat"].Spammer.state then
-        ChatSpam(curTime)
-    end
-
-    if Menu["WorldExploits"].Noclip.state then
-        local bind = Menu["WorldExploits"].NoclipBind
-        
-        if not bind or bind.bind == 'None' or bind.state then
-            ToggleNoclip(true)
-        end
+    if Menu["VisualsESP"].Toggle.state then
+        ESP.updateEsp()
     end
 end
 
@@ -1827,6 +2161,7 @@ OnLoad()
 CreateMenu()
 
 Hooks:Register("onInit", onInit)
+Hooks:Register("OnStepped", onStepped)
 Hooks:Register("onRenderStepped", onRenderStepped)
 Hooks:RegisterCustom("Unload", onUnload)
 
